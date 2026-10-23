@@ -9,28 +9,35 @@ export default function FlashcardPage() {
   const [stats, setStats] = useState(null);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = async () => {
     setLoading(true);
-    const due = await fetchDueCards();
-    const st = await fetchStats();
-    setCards(due);
-    setStats(st);
-    setIndex(0);
+    setError("");
+    try {
+      const due = await fetchDueCards();
+      const st = await fetchStats();
+      setCards(due);
+      setStats(st);
+      setIndex(0);
 
-    const map = {};
-    await Promise.all(
-      due.map(async (card) => {
-        try {
-          const v = await fetchVocabulary(card.vocabulary_id);
-          map[card.vocabulary_id] = v;
-        } catch {
-          map[card.vocabulary_id] = null;
-        }
-      })
-    );
-    setVocabMap(map);
-    setLoading(false);
+      const map = {};
+      await Promise.all(
+        due.map(async (card) => {
+          try {
+            const v = await fetchVocabulary(card.vocabulary_id);
+            map[card.vocabulary_id] = v;
+          } catch {
+            map[card.vocabulary_id] = null;
+          }
+        })
+      );
+      setVocabMap(map);
+    } catch {
+      setError("Không tải được thẻ ôn tập. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -38,9 +45,13 @@ export default function FlashcardPage() {
   }, []);
 
   const handleReview = async (vocabId, remembered) => {
-    await reviewCard(vocabId, remembered);
-    setIndex((i) => i + 1);
-    if (index + 1 >= cards.length) load();
+    try {
+      await reviewCard(vocabId, remembered);
+      setIndex((i) => i + 1);
+      if (index + 1 >= cards.length) load();
+    } catch {
+      setError("Không lưu được kết quả ôn tập. Vui lòng thử lại.");
+    }
   };
 
   if (loading) return <p className="muted">Đang tải...</p>;
@@ -49,6 +60,8 @@ export default function FlashcardPage() {
 
   return (
     <div>
+      {error && <p className="error">{error}</p>}
+
       {stats && (
         <div className="stats">
           <div className="card stat-box">

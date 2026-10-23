@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import VocabularyForm from "../../frontend/src/components/VocabularyForm";
-import VocabularyBatchForm from "../../frontend/src/components/VocabularyBatchForm";
-import VocabularyCard from "../../frontend/src/components/VocabularyCard";
+import VocabularyForm from "../components/VocabularyForm";
+import VocabularyBatchForm from "../components/VocabularyBatchForm";
+import VocabularyCard from "../components/VocabularyCard";
 import {
   fetchVocabularies,
   deleteVocabulary,
-} from "../../frontend/src/services/vocabularyService";
+} from "../services/vocabularyService";
 
 export default function VocabularyPage() {
   const [items, setItems] = useState([]);
@@ -13,15 +13,21 @@ export default function VocabularyPage() {
   const [search, setSearch] = useState("");
   const [level, setLevel] = useState("");
   const [page, setPage] = useState(1);
+  const [error, setError] = useState("");
   const pageSize = 12;
 
   const load = useCallback(async () => {
     const params = { page, page_size: pageSize };
     if (search) params.search = search;
     if (level) params.level = level;
-    const data = await fetchVocabularies(params);
-    setItems(data.items);
-    setTotal(data.total);
+    try {
+      const data = await fetchVocabularies(params);
+      setItems(data.items);
+      setTotal(data.total);
+      setError("");
+    } catch {
+      setError("Không tải được danh sách từ vựng. Vui lòng thử lại.");
+    }
   }, [page, search, level]);
 
   useEffect(() => {
@@ -30,8 +36,13 @@ export default function VocabularyPage() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Xóa từ này?")) return;
-    await deleteVocabulary(id);
-    load();
+    try {
+      await deleteVocabulary(id);
+      setError("");
+      load();
+    } catch {
+      setError("Không xóa được từ vựng. Vui lòng thử lại.");
+    }
   };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -68,6 +79,8 @@ export default function VocabularyPage() {
           ))}
         </select>
       </div>
+
+      {error && <p className="error">{error}</p>}
 
       <p className="muted">Tổng cộng: {total} từ</p>
 

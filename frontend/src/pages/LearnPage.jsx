@@ -6,17 +6,24 @@ export default function LearnPage() {
   const [lessons, setLessons] = useState([]);
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     (async () => {
-      const [ls, pg] = await Promise.all([fetchLessons(), fetchProgress()]);
-      setLessons(ls);
-      setProgress(pg);
-      setLoading(false);
+      try {
+        const [ls, pg] = await Promise.all([fetchLessons(), fetchProgress()]);
+        setLessons(ls);
+        setProgress(pg);
+      } catch {
+        setError("Không tải được lộ trình. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
   if (loading) return <p className="muted">Đang tải lộ trình...</p>;
+  if (error) return <p className="error">{error}</p>;
 
   return (
     <div>
