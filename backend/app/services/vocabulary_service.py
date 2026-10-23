@@ -1,6 +1,8 @@
+import re
 from datetime import datetime, timezone
 
 from bson import ObjectId
+from pymongo import UpdateOne
 
 from app.db.mongodb import get_database
 from app.models.vocabulary import VocabularyCreate, VocabularyUpdate
@@ -77,3 +79,69 @@ async def delete_vocabulary(vocab_id: str) -> bool:
     db = get_database()
     result = await db[COLLECTION].delete_one({"_id": ObjectId(vocab_id)})
     return result.deleted_count > 0
+
+
+async def create_vocabularies_bulk(items: list[dict]) -> dict:
+    """Ghi mot loat tu vung trong 1 lan bulk_write.
+
+    Khop theo `word` khong phan biet hoa thuong nen chay lai nhieu lan
+    van khong sinh ban ghi trung.
+    """
+    db = get_database()
+    if not items:
+        return {"saved": 0, "created": 0, "updated": 0}
+
+    now = datetime.now(timezone.utc)
+
+    unique_words: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        word = (item.get("word") or "").strip()
+        key = word.lower()
+        if not word or key in seen:
+            continue
+        seen.add(key)
+        unique_words.append(word)
+
+    if not unique_words:
+        return {"saved": 0, "created": 0, "updated": 0}
+
+    # Chi quet nhung tu trong batch (khong scan ca collection)
+    pattern = "^(" + "|".join(re.escape(w) for w in unique_words) + ")$"
+    existing: dict[str, ObjectId] = {}
+    async for doc in db[COLLECTION].find(
+        {"word": {"$regex": pattern, "$options": "i"}}, {"word": 1}
+    ):
+        key = (doc.get("word") or "").strip().lower()
+        existing.setdefault(key, doc["_id"])
+
+    operations = []
+    created = updated = 0
+    for item in items:
+        word = (item.get("word") or "").strip()
+        if not word:
+            continue
+        payload = {**item, "word": word, "updated_at": now}
+        current_id = existing.get(word.lower())
+        if current_id is not None:
+            operations.append(
+                UpdateOne(
+                    {"_id": current_id},
+                    {"$set": payload, "$setOnInsert": {"created_at": now}},
+                )
+            )
+            updated += 1
+        else:
+            operations.append(
+                UpdateOne(
+                    {"word": word},
+                    {"$set": payload, "$setOnInsert": {"created_at": now}},
+                    upsert=True,
+                )
+            )
+            created += 1
+
+    if operations:
+        await db[COLLECTION].bulk_write(operations, ordered=False)
+
+    return {"saved": len(operations), "created": created, "updated": updated}

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.db.mongodb import connect_to_mongo, close_mongo_connection
+from app.db.mongodb import connect_to_mongo, close_mongo_connection, is_auth_error
 from app.routers import (
     auth_router,
     vocabulary_router,
@@ -20,12 +20,24 @@ logger = logging.getLogger("uvicorn.error")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("MongoDB target: %s", settings.mongo_target)
     for attempt in range(10):
         try:
             await connect_to_mongo()
-            logger.info("MongoDB connected")
+            logger.info("MongoDB connected -> %s", settings.mongo_target)
             break
         except Exception as e:
+            if is_auth_error(e):
+                logger.error("MongoDB xac thuc that bai: %s", e)
+                logger.error(
+                    "Kiem tra MONGO_URI trong backend/.env: user/mat khau sai, "
+                    "hoac user chua co role tren database '%s'.",
+                    settings.MONGO_DB_NAME,
+                )
+                logger.error(
+                    "Chay 'python scripts/check_mongo.py' de chan doan day du."
+                )
+                raise
             if attempt == 9:
                 raise
             logger.warning(
@@ -59,4 +71,9 @@ app.include_router(progress_router.router)
 
 @app.get("/health", tags=["health"])
 async def health():
-    return {"status": "ok", "app": settings.APP_NAME}
+    return {
+        "status": "ok",
+        "app": settings.APP_NAME,
+        "database": settings.MONGO_DB_NAME,
+        "mongo": settings.mongo_target,
+    }

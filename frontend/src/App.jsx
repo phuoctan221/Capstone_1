@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -10,15 +10,22 @@ import FlashcardsPage from "./pages/FlashcardPage";
 import VocabularyPage from "./pages/VocabularyPage";
 import { getToken } from "./services/authService";
 
+const AUTH_ROUTES = ["/login", "/register"];
+
 function ProtectedRoute({ children }) {
   return getToken() ? children : <Navigate to="/login" replace />;
 }
 
 export default function App() {
+  const location = useLocation();
+  const isAuthenticated = Boolean(getToken());
+  const isAuthPage = AUTH_ROUTES.includes(location.pathname);
+  const showNavbar = isAuthenticated && !isAuthPage;
+
   return (
     <div className="app">
-      <Navbar />
-      <main className="container">
+      {showNavbar && <Navbar />}
+      <main className={showNavbar ? "container" : ""}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />

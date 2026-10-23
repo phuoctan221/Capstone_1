@@ -31,3 +31,11 @@ export async function generateWithAI(word) {
   });
   return data;
 }
+
+export async function generateBatchWithAI(payload) {
+  const { data } = await api.post("/vocabulary/ai-generate-batch", {
+    target_language: "vi",
+    ...payload,
+  });
+  return data;
+}

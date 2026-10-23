@@ -6,17 +6,29 @@ export function getToken() {
 
 export function getUser() {
   const raw = localStorage.getItem("user");
-  return raw ? JSON.parse(raw) : null;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    localStorage.removeItem("user");
+    return null;
+  }
+}
+
+function emitAuthChange() {
+  window.dispatchEvent(new Event("auth-change"));
 }
 
 export function setSession(token, user) {
   localStorage.setItem("token", token);
   localStorage.setItem("user", JSON.stringify(user));
+  emitAuthChange();
 }
 
 export function clearSession() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
+  emitAuthChange();
 }
 
 export async function login(email, password) {

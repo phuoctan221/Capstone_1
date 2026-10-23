@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import VocabularyForm from "../components/VocabularyForm";
-import VocabularyCard from "../components/VocabularyCard";
+import VocabularyForm from "../../frontend/src/components/VocabularyForm";
+import VocabularyBatchForm from "../../frontend/src/components/VocabularyBatchForm";
+import VocabularyCard from "../../frontend/src/components/VocabularyCard";
 import {
   fetchVocabularies,
   deleteVocabulary,
-} from "../services/vocabularyService";
+} from "../../frontend/src/services/vocabularyService";
 
 export default function VocabularyPage() {
   const [items, setItems] = useState([]);
@@ -38,6 +39,10 @@ export default function VocabularyPage() {
   return (
     <div>
       <VocabularyForm onCreated={load} />
+
+      <div style={{ margin: "1.5rem 0" }}>
+        <VocabularyBatchForm onCreated={load} />
+      </div>
 
       <div style={{ display: "flex", gap: "1rem", margin: "1.5rem 0" }}>
         <input

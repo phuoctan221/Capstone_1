@@ -51,3 +51,28 @@ class AIGenerateResponse(BaseModel):
     antonyms: list[str]
     topic: str
     level: str
+
+
+class AIBatchRequest(BaseModel):
+    words: list[str] = Field(default_factory=list, max_length=30)
+    topic: str = "general"
+    level: str = Field("B1", pattern="^(A1|A2|B1|B2|C1|C2)$")
+    count: int = Field(10, ge=1, le=30)
+    save: bool = True
+    target_language: str = "vi"
+
+
+class AIBatchItem(BaseModel):
+    word: str
+    ok: bool
+    saved: bool = False
+    data: AIGenerateResponse | None = None
+    error: str | None = None
+
+
+class AIBatchResponse(BaseModel):
+    requested: int
+    succeeded: int
+    failed: int
+    saved: int
+    items: list[AIBatchItem]

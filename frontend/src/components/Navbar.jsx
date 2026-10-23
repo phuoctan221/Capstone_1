@@ -1,55 +1,120 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getUser, clearSession } from "../services/authService";
+import { clearSession } from "../services/authService";
+import { useAuth } from "../hooks/useAuth";
 import { fetchProgress } from "../services/lessonService";
 
 export default function Navbar() {
-  const user = getUser();
+  const user = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [progress, setProgress] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchProgress().then(setProgress).catch(() => {});
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!user) {
+      setProgress(null);
+      return undefined;
     }
-  }, []);
+    let active = true;
+    fetchProgress()
+      .then((data) => {
+        if (active) setProgress(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   const handleLogout = () => {
     clearSession();
     navigate("/login");
   };
 
+  const linkClass = ({ isActive }) =>
+    isActive ? "nav-link is-active" : "nav-link";
+
   return (
     <header className="navbar">
-      <Link to="/" className="logo">
-        SmartVOCAB AI
-      </Link>
-      <nav>
-        {user ? (
-          <>
-            <Link to="/learn">Học</Link>
-            <Link to="/flashcards">Ôn tập</Link>
-            <Link to="/vocabulary">Từ vựng</Link>
-            {progress && (
-              <span className="nav-xp" title="XP / Chuỗi ngày / Cấp độ">
-                <span>Lv {progress.level}</span>
-                <span>{progress.xp} XP</span>
-                <span>{progress.streak}🔥</span>
+      <div className="navbar-inner">
+        <Link to="/" className="logo">
+          <span className="logo-mark">SV</span>
+          <span className="logo-text">
+            SmartVOCAB <em>AI</em>
+          </span>
+        </Link>
+
+        <button
+          type="button"
+          className={`nav-toggle${menuOpen ? " is-open" : ""}`}
+          aria-label="Mở menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <nav className={`nav-links${menuOpen ? " is-open" : ""}`}>
+          {user ? (
+            <>
+              <NavLink to="/learn" className={linkClass}>
+                Học
+              </NavLink>
+              <NavLink to="/flashcards" className={linkClass}>
+                Ôn tập
+              </NavLink>
+              <NavLink to="/vocabulary" className={linkClass}>
+                Từ vựng
+              </NavLink>
+
+              {progress && (
+                <span className="nav-xp" title="XP / Chuỗi ngày / Cấp độ">
+                  <span className="xp-item">
+                    Lv <b>{progress.level}</b>
+                  </span>
+                  <span className="xp-dot" />
+                  <span className="xp-item">
+                    <b>{progress.xp}</b> XP
+                  </span>
+                  <span className="xp-dot" />
+                  <span className="xp-item">{progress.streak}🔥</span>
+                </span>
+              )}
+
+              <span className="nav-user" title={user.email}>
+                <span className="avatar">
+                  {(user.username || user.email || "?").charAt(0).toUpperCase()}
+                </span>
+                <span className="nav-user-name">{user.username}</span>
               </span>
-            )}
-            <button className="btn btn-outline" onClick={handleLogout}>
-              Đăng xuất
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login">Đăng nhập</Link>
-            <Link to="/register" className="btn">
-              Đăng ký
-            </Link>
-          </>
-        )}
-      </nav>
+
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={handleLogout}
+              >
+                Đăng xuất
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink to="/" end className={linkClass}>
+                Trang chủ
+              </NavLink>
+              <NavLink to="/login" className={linkClass}>
+                Đăng nhập
+              </NavLink>
+            </>
+          )}
+        </nav>
+      </div>
     </header>
   );
 }

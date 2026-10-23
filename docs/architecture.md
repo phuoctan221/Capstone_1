@@ -116,6 +116,6 @@ Fallback: nếu thiếu `GEMINI_API_KEY`, endpoint trả 502 kèm thông báo.
 
 ## 7. Chiến lược triển khai
 
-- **Dev**: Docker Compose (MongoDB local) + `uvicorn --reload` + `npm run dev`
+- **Dev**: MongoDB Atlas (cluster dùng chung cho cả team) + `uvicorn --reload` + `npm run dev`
 - **Prod**: Uvicorn/Gunicorn sau Nginx, MongoDB Atlas, frontend build tĩnh trên CDN
 - **Secrets**: qua `.env`, không commit lên git

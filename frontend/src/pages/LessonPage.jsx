@@ -158,7 +158,7 @@ function StudySession({ lesson, mode, onExit }) {
     try {
       const res = await submitStudyAnswer(current.id, "", isCorrect);
       setSessionXp((x) => x + res.xp_gained);
-    } catch {}
+    } catch { }
   };
 
   const next = () => {
@@ -197,11 +197,9 @@ function StudySession({ lesson, mode, onExit }) {
               {choices.map((c, i) => (
                 <button
                   key={i}
-                  className={`choice ${
-                    feedback && c === current.meaning ? "right" : ""
-                  } ${
-                    feedback === "wrong" && c !== current.meaning ? "dim" : ""
-                  }`}
+                  className={`choice ${feedback && c === current.meaning ? "right" : ""
+                    } ${feedback === "wrong" && c !== current.meaning ? "dim" : ""
+                    }`}
                   disabled={!!feedback}
                   onClick={() => answer(c === current.meaning)}
                 >
@@ -266,11 +264,9 @@ function StudySession({ lesson, mode, onExit }) {
                 (w, i) => (
                   <button
                     key={i}
-                    className={`choice ${
-                      feedback && w.id === current.id ? "right" : ""
-                    } ${
-                      feedback === "wrong" && w.id !== current.id ? "dim" : ""
-                    }`}
+                    className={`choice ${feedback && w.id === current.id ? "right" : ""
+                      } ${feedback === "wrong" && w.id !== current.id ? "dim" : ""
+                      }`}
                     disabled={!!feedback}
                     onClick={() => answer(w.id === current.id)}
                   >
