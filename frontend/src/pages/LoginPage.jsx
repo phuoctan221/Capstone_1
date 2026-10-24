@@ -30,8 +30,13 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await login(form.email.trim(), form.password);
-      navigate("/vocabulary");
+      const res = await login(form.email.trim(), form.password);
+      const user = res?.user;
+      if (user && user.onboarded === false) {
+        navigate("/onboarding/level");
+      } else {
+        navigate("/learn");
+      }
     } catch (err) {
       const detail = err.response?.data?.detail;
       setError(typeof detail === "string" ? detail : "Không thể đăng nhập. Vui lòng kiểm tra thông tin và thử lại.");

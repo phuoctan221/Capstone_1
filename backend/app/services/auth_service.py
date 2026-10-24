@@ -59,4 +59,8 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
     user["id"] = str(user.pop("_id"))
+    if "interests" not in user or user.get("interests") is None:
+        user["interests"] = []
+    if "onboarded" not in user:
+        user["onboarded"] = False
     return user

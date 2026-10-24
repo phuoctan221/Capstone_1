@@ -25,7 +25,7 @@ export default function RegisterPage() {
     setError("");
     try {
       await register(form.username.trim(), form.email.trim(), form.password);
-      navigate("/vocabulary");
+      navigate("/onboarding/level");
     } catch (err) {
       const detail = err.response?.data?.detail;
       setError(typeof detail === "string" ? detail : "Không thể đăng ký. Vui lòng thử lại.");

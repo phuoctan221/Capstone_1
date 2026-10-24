@@ -46,3 +46,48 @@ export async function register(username, email, password) {
   setSession(data.access_token, data.user);
   return data;
 }
+
+export async function fetchMe() {
+  const { data } = await api.get("/auth/me");
+  const token = getToken();
+  if (token) {
+    setSession(token, data);
+  } else {
+    localStorage.setItem("user", JSON.stringify(data));
+    emitAuthChange();
+  }
+  return data;
+}
+
+export async function refreshUser() {
+  return fetchMe();
+}
+
+export async function updateProfile(payload) {
+  const { data } = await api.put("/auth/me", payload);
+  const token = getToken();
+  if (token) {
+    setSession(token, data);
+  } else {
+    localStorage.setItem("user", JSON.stringify(data));
+    emitAuthChange();
+  }
+  return data;
+}
+
+export async function completeOnboarding(payload) {
+  const { data } = await api.post("/auth/onboarding", payload);
+  const token = getToken();
+  if (token) {
+    setSession(token, data);
+  } else {
+    localStorage.setItem("user", JSON.stringify(data));
+    emitAuthChange();
+  }
+  return data;
+}
+
+export async function changePassword(payload) {
+  const { data } = await api.put("/auth/password", payload);
+  return data;
+}
