@@ -20,6 +20,10 @@ async def connect_to_mongo():
     client = AsyncIOMotorClient(
         settings.MONGO_URI,
         serverSelectionTimeoutMS=settings.MONGO_TIMEOUT_MS,
+        connectTimeoutMS=settings.MONGO_TIMEOUT_MS,
+        socketTimeoutMS=settings.MONGO_TIMEOUT_MS * 3,
+        retryWrites=True,
+        appname="smartvocab-backend",
         tz_aware=True,
     )
     db = client[settings.MONGO_DB_NAME]

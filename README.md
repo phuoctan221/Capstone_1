@@ -179,6 +179,91 @@ mongoimport --uri "mongodb+srv://<user>:<password>@<cluster>.mongodb.net/capston
   --file data/sample_vocabulary.json
 ```
 
+## Chạy bằng Docker (Phase A — giữ MongoDB Atlas)
+
+Kiến trúc: `nginx` phục vụ SPA + cân bằng tải `/api` tới **2 backend** (`api1`, `api2`), cả hai dùng chung `backend/.env` và kết nối Atlas hiện tại.
+
+```
+Browser :8080 ──► web (nginx) ──► api1 / api2 (FastAPI) ──► MongoDB Atlas
+                    │ /            (SPA + fallback)
+                    └ /api/*       (least_conn, strip /api)
+```
+
+### Yêu cầu
+
+- Docker Desktop (Docker Engine + Docker Compose v2) đang chạy
+- `backend/.env` có `MONGO_URI` trỏ Atlas (Phase A **không** di chuyển dữ liệu)
+
+### Cấu trúc container
+
+| Service | Vai trò | Cổng host |
+|---|---|---|
+| `web` | Nginx: serve React build + cân bằng tải `/api` | `8080` (đổi bằng `WEB_PORT`) |
+| `api1`, `api2` | FastAPI + Motor, dùng chung `backend/.env` | không mở ra host |
+| `smartvocab` | Network nội bộ giữa các container | — |
+
+### Lần đầu chạy
+
+```bash
+# 1. Chuẩn bị env — CHỈ copy khi chưa có, không ghi đè .env thật
+# Windows (cmd)
+if not exist backend\.env copy backend\.env.example backend\.env
+# macOS/Linux
+[ -f backend/.env ] || cp backend/.env.example backend/.env
+
+# rồi điền MONGO_URI / JWT_SECRET / GEMINI_API_KEY trong backend/.env
+# .env.docker.example là bản tham khảo cho Docker + Phase B
+
+# 2. Build và chạy
+docker compose up -d --build
+
+# 3. Kiểm tra
+docker compose ps
+curl http://localhost:8080/healthz
+curl http://localhost:8080/api/health     # Windows PowerShell: curl.exe ...
+```
+
+Mở app tại **http://localhost:8080**.
+
+### Lệnh thường dùng
+
+```bash
+docker compose ps                      # trạng thái + healthcheck
+docker compose logs -f api1            # log backend
+docker compose logs -f web             # log nginx
+docker compose restart api1            # restart 1 service
+docker compose up -d --build           # rebuild sau khi sửa code
+docker compose down                    # dừng, GIỮ dữ liệu Atlas
+```
+
+Đổi cổng web (khi 8080 bị chiếm):
+
+```powershell
+$env:WEB_PORT=9090; docker compose up -d
+# bash: WEB_PORT=9090 docker compose up -d
+```
+
+### Kiểm tra nhanh
+
+- `web` healthy: `curl http://localhost:8080/healthz` → `ok`
+- API + MongoDB: `curl http://localhost:8080/api/health` → `"status":"ok"`
+- Trang đăng nhập render tại `/login`, gọi API qua `/api/...`
+
+### Xử lý sự cố
+
+| Lỗi | Cách xử lý |
+|---|---|
+| `failed to connect to the docker API` | Mở Docker Desktop, chờ engine chạy rồi thử lại |
+| `THESE PACKAGES DO NOT MATCH THE HASHES` khi `pip install` | Lỗi mạng/tải dở; chạy lại `docker compose build api1` |
+| `port is already allocated` | Đổi `WEB_PORT` như trên |
+| `api1`/`api2` unhealthy | `docker compose logs api1`; kiểm tra `MONGO_URI` trong `backend/.env` |
+| Sửa code nhưng app không đổi | `docker compose up -d --build` |
+| Nginx không thấy `api1/api2` sau khi recreate | `docker compose restart web` |
+
+> **Dữ liệu:** Phase A dùng Atlas nên `docker compose down` không làm mất dữ liệu. **Không** chạy `docker compose down -v` — sẽ xóa volume MongoDB khi chuyển sang Phase B. Không commit `backend/.env`, keyfile hay file dump.
+
+Chi tiết rollback, bảo toàn dữ liệu và lộ trình Replica Set: [docs/deployment.md](docs/deployment.md).
+
 ## Tài liệu thiết kế
 
 - [Nhu cầu hệ thống](docs/requirements.md)
