@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.docker.example
 
 # Python
 __pycache__/
@@ -27,3 +28,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Docker / deployment artifacts
+backups/
+mongodump/
+*.dump
+mongo-keyfile
