@@ -34,51 +34,143 @@ SmartVOCAB/
 └── data/         # sample_vocabulary.json
 ```
 
-## Yêu cầu hệ thống
+## Thành viên mới: clone và chạy dự án
 
-- Python 3.11+
-- Node.js 18+
-- MongoDB Atlas — dùng chung một cluster cho cả team, **không cần cài Docker hay MongoDB local**
-- API key Google Gemini (tùy chọn — cho tính năng AI gợi ý)
+### 1. Cần cài những gì
 
-## Chạy dự án
+| Công cụ | Phiên bản | Bắt buộc | Dùng để |
+|---|---|---|---|
+| Git | mới nhất | Có | clone, pull, push |
+| Python | 3.11+ | Có | chạy backend FastAPI |
+| Node.js + npm | 18+ (khuyến nghị 20 LTS) | Có | chạy frontend React/Vite |
+| Docker Desktop | mới nhất | Không | chạy toàn bộ bằng container |
+| MongoDB | — | Không | dùng Atlas chung, **không cài local** |
+| Google Gemini API key | — | Không | bật tính năng gợi ý từ vựng AI |
 
-### Cách nhanh nhất
-
-Double-click `start.bat`. Script sẽ tự:
-
-1. Kiểm tra Python/Node đã cài chưa
-2. Tạo `backend/.env` từ `.env.example` nếu chưa có
-3. Tạo virtualenv + cài `requirements.txt` (nếu chưa có)
-4. `npm install` (nếu chưa có `node_modules`)
-5. Mở Backend (`:8000`) và Frontend (`:5173`), tự mở trình duyệt khi backend sẵn sàng
-
-### Thủ công
+Kiểm tra nhanh:
 
 ```bash
-# 1. Backend
+git --version
+python --version      # macOS/Linux có thể là python3
+node --version
+npm --version
+docker --version      # chỉ cần nếu chạy bằng Docker
+```
+
+### 2. Clone và tạo nhánh làm việc
+
+```bash
+git clone https://github.com/phuoctan221/Capstone_1.git
+cd Capstone_1
+
+git switch tan                  # nhánh phát triển hiện tại
+git switch -c feature/<ten-ban> # tạo nhánh riêng trước khi sửa code
+```
+
+- `main`: nhánh ổn định
+- `tan`: nhánh phát triển chính của nhóm
+- `backup-tan-before-merge`: **chỉ để backup, không commit/push vào**
+- Làm việc trên `feature/...` rồi mở PR vào `tan`.
+
+### 3. Tạo `backend/.env`
+
+Lấy `MONGO_URI` từ team lead qua chat/nhóm (không commit chuỗi này). Sau đó:
+
+```bash
+cd backend
+copy .env.example .env          # Windows (cmd)
+# cp .env.example .env          # macOS/Linux
+```
+
+Điền tối thiểu:
+
+```ini
+MONGO_URI="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/capstone1?authSource=admin"
+MONGO_DB_NAME="capstone1"
+JWT_SECRET="<chuoi-ngau-nhien>"
+GEMINI_API_KEY="<key-rieng-cua-ban>"   # có thể để trống nếu chưa dùng AI
+```
+
+Sinh `JWT_SECRET`:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+> Muốn thử nghiệm DB riêng mà không ảnh hưởng nhóm: tạo `backend/.env.local` để override `MONGO_URI` (file này cũng bị ignore).
+
+### 4. Chạy local (khuyến nghị khi code)
+
+Terminal 1 — backend:
+
+```bash
 cd backend
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 # source .venv/bin/activate     # macOS/Linux
-
 pip install -r requirements.txt
-copy .env.example .env          # Windows — rồi điền MONGO_URI + GEMINI_API_KEY
-# cp .env.example .env          # macOS/Linux
-
 uvicorn app.main:app --reload --port 8000
 ```
 
-Swagger UI: http://localhost:8000/docs
+- Swagger: http://localhost:8000/docs
+- Health: http://localhost:8000/health
+
+Terminal 2 — frontend:
 
 ```bash
-# 2. Frontend
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-App: http://localhost:5173 (proxy `/api` → backend `:8000`)
+Mở http://localhost:5173 (Vite proxy `/api` → `http://localhost:8000`).
+
+### 5. Hoặc chạy bằng Docker
+
+```bash
+# backend/.env phải tồn tại trước
+docker compose up -d --build
+docker compose ps
+```
+
+Mở http://localhost:8080. Chi tiết và xử lý sự cố: xem mục **Chạy bằng Docker** bên dưới.
+
+### 6. Nạp dữ liệu mẫu (tùy chọn)
+
+```bash
+cd backend
+.venv\Scripts\python.exe scripts\import_sample_vocabulary.py --dry-run
+.venv\Scripts\python.exe scripts\import_sample_vocabulary.py
+```
+
+Chỉ chạy khi DB đang trống hoặc bạn muốn cập nhật bộ từ mẫu.
+
+### 7. Checklist sau khi chạy
+
+- [ ] `GET /health` trả `"status":"ok"` và đúng database
+- [ ] Mở frontend, thấy trang đăng nhập
+- [ ] Đăng ký / đăng nhập được
+- [ ] Thêm / sửa / xóa một từ vựng
+- [ ] (Nếu có key) thử gợi ý từ vựng AI
+
+### 8. Lỗi thường gặp
+
+| Lỗi | Cách xử lý |
+|---|---|
+| `Chua cau hinh MONGO_URI` | Chưa tạo hoặc chưa điền `backend/.env` |
+| `MongoDB xac thuc that bai` | Sai user/password hoặc IP chưa whitelist trên Atlas; chạy `python scripts/check_mongo.py` |
+| `ModuleNotFoundError: app` | Phải đứng trong thư mục `backend/` khi chạy `uvicorn` |
+| Port bận (`EADDRINUSE`) | Đổi port hoặc tắt process đang dùng 5173/8000/8080 |
+| `npm ci` lỗi | Kiểm tra Node ≥ 18 (`node -v`), xóa `node_modules` rồi chạy lại |
+| CORS error | Thêm origin frontend vào `CORS_ORIGINS` trong `backend/.env` |
+| Docker: `failed to connect to the docker API` | Mở Docker Desktop và chờ engine chạy |
+
+### 9. Quy ước Git
+
+- `git pull --ff-only` trước khi bắt đầu làm.
+- Không commit: `backend/.env`, `.env.local`, `.venv/`, `node_modules/`, `dist/`, file dump/keyfile.
+- Không force-push; không push trực tiếp vào `main` hoặc `backup-tan-before-merge`.
+- Commit message ngắn, rõ: `feat: ...`, `fix: ...`, `docs: ...`.
 
 ## MongoDB Atlas — database dùng chung
 
@@ -109,7 +201,7 @@ Cả team dùng chung **một cluster Atlas**, nên không ai phải cài MongoD
    JWT_SECRET="<chuoi-ngau-nhien-cua-ban>"
    ```
 
-4. Chạy `start.bat` hoặc `uvicorn` + `npm run dev` như trên.
+4. Chạy `uvicorn` + `npm run dev` (xem mục **Thành viên mới**), hoặc `docker compose up -d --build`.
 
 > `backend/.env` đã nằm trong `.gitignore` — không ai push file này lên git.
 

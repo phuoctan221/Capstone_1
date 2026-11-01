@@ -101,7 +101,7 @@ async def import_records(db, records: list[dict], mode: str, dry_run: bool) -> d
             continue
         seen.add(key)
 
-        payload = {**record, "updated_at": now}
+        payload = {**record, "word_key": key, "updated_at": now}
         current = existing.get(key)
 
         if current is None:
