@@ -1,0 +1,851 @@
+[
+  {
+    "word": "abandon",
+    "phonetic": "əˈbændən",
+    "part_of_speech": "verb",
+    "meaning": "từ bỏ, bỏ rơi",
+    "example": "They had to abandon the car in the snow.",
+    "synonyms": [
+      "desert",
+      "leave"
+    ],
+    "antonyms": [
+      "keep",
+      "retain"
+    ],
+    "topic": "daily-life",
+    "level": "B1"
+  },
+  {
+    "word": "beneficial",
+    "phonetic": "ˌbenɪˈfɪʃl",
+    "part_of_speech": "adjective",
+    "meaning": "có lợi, hữu ích",
+    "example": "Regular exercise is beneficial to your health.",
+    "synonyms": [
+      "advantageous",
+      "helpful"
+    ],
+    "antonyms": [
+      "harmful"
+    ],
+    "topic": "general",
+    "level": "B1"
+  },
+  {
+    "word": "comprehensive",
+    "phonetic": "ˌkɒmprɪˈhensɪv",
+    "part_of_speech": "adjective",
+    "meaning": "toàn diện, bao quát",
+    "example": "The report provides a comprehensive analysis.",
+    "synonyms": [
+      "thorough",
+      "complete"
+    ],
+    "antonyms": [
+      "partial"
+    ],
+    "topic": "academic",
+    "level": "B2"
+  },
+  {
+    "word": "deliberate",
+    "phonetic": "dɪˈlɪbərət",
+    "part_of_speech": "adjective",
+    "meaning": "có chủ đích, thận trọng",
+    "example": "The delay was a deliberate attempt to frustrate us.",
+    "synonyms": [
+      "intentional",
+      "planned"
+    ],
+    "antonyms": [
+      "accidental"
+    ],
+    "topic": "academic",
+    "level": "C1"
+  },
+  {
+    "word": "ephemeral",
+    "phonetic": "ɪˈfem(ə)rəl",
+    "part_of_speech": "adjective",
+    "meaning": "tạm thời, ngắn ngủi",
+    "example": "Fame is often ephemeral.",
+    "synonyms": [
+      "fleeting",
+      "transient"
+    ],
+    "antonyms": [
+      "permanent"
+    ],
+    "topic": "general",
+    "level": "C1"
+  },
+  {
+    "word": "flourish",
+    "phonetic": "ˈflʌrɪʃ",
+    "part_of_speech": "verb",
+    "meaning": "phát triển, nở rộ",
+    "example": "The business flourished after the rebranding.",
+    "synonyms": [
+      "thrive",
+      "prosper"
+    ],
+    "antonyms": [
+      "decline"
+    ],
+    "topic": "business",
+    "level": "B2"
+  },
+  {
+    "word": "inevitable",
+    "phonetic": "ɪnˈevɪtəbl",
+    "part_of_speech": "adjective",
+    "meaning": "không thể tránh khỏi",
+    "example": "Change is inevitable in a growing company.",
+    "synonyms": [
+      "unavoidable",
+      "certain"
+    ],
+    "antonyms": [
+      "avoidable"
+    ],
+    "topic": "general",
+    "level": "B2"
+  },
+  {
+    "word": "negotiate",
+    "phonetic": "nəˈɡəʊʃieɪt",
+    "part_of_speech": "verb",
+    "meaning": "đàm phán",
+    "example": "They negotiated a better salary.",
+    "synonyms": [
+      "bargain",
+      "mediate"
+    ],
+    "antonyms": [
+      "dictate"
+    ],
+    "topic": "business",
+    "level": "B1"
+  },
+  {
+    "word": "resilient",
+    "phonetic": "rɪˈzɪliənt",
+    "part_of_speech": "adjective",
+    "meaning": "kiên cường, bền bỉ",
+    "example": "Children are often more resilient than adults expect.",
+    "synonyms": [
+      "tough",
+      "adaptable"
+    ],
+    "antonyms": [
+      "fragile"
+    ],
+    "topic": "science",
+    "level": "C1"
+  },
+  {
+    "word": "sustainable",
+    "phonetic": "səˈsteɪnəbl",
+    "part_of_speech": "adjective",
+    "meaning": "bền vững",
+    "example": "We need sustainable sources of energy.",
+    "synonyms": [
+      "renewable",
+      "viable"
+    ],
+    "antonyms": [
+      "unsustainable"
+    ],
+    "topic": "science",
+    "level": "B2"
+  },
+  {
+    "word": "allocate",
+    "phonetic": "ˈæləkeɪt",
+    "part_of_speech": "verb",
+    "meaning": "phân bổ, chia phần",
+    "example": "We must allocate more resources to marketing.",
+    "synonyms": [
+      "distribute",
+      "assign"
+    ],
+    "antonyms": [
+      "withhold"
+    ],
+    "topic": "business",
+    "level": "B2"
+  },
+  {
+    "word": "budget",
+    "phonetic": "ˈbʌdʒɪt",
+    "part_of_speech": "noun",
+    "meaning": "ngân sách",
+    "example": "The project went over budget.",
+    "synonyms": [
+      "funds",
+      "allowance"
+    ],
+    "antonyms": [],
+    "topic": "business",
+    "level": "A2"
+  },
+  {
+    "word": "client",
+    "phonetic": "ˈklaɪənt",
+    "part_of_speech": "noun",
+    "meaning": "khách hàng",
+    "example": "The client approved our proposal.",
+    "synonyms": [
+      "customer",
+      "buyer"
+    ],
+    "antonyms": [
+      "seller"
+    ],
+    "topic": "business",
+    "level": "A2"
+  },
+  {
+    "word": "deadline",
+    "phonetic": "ˈdedlaɪn",
+    "part_of_speech": "noun",
+    "meaning": "hạn chót",
+    "example": "We need to meet the deadline.",
+    "synonyms": [
+      "due date",
+      "cutoff"
+    ],
+    "antonyms": [],
+    "topic": "business",
+    "level": "A2"
+  },
+  {
+    "word": "efficient",
+    "phonetic": "ɪˈfɪʃnt",
+    "part_of_speech": "adjective",
+    "meaning": "hiệu quả",
+    "example": "The new system is far more efficient.",
+    "synonyms": [
+      "effective",
+      "productive"
+    ],
+    "antonyms": [
+      "wasteful"
+    ],
+    "topic": "business",
+    "level": "B1"
+  },
+  {
+    "word": "innovate",
+    "phonetic": "ˈɪnəveɪt",
+    "part_of_speech": "verb",
+    "meaning": "đổi mới, sáng tạo",
+    "example": "Companies must innovate to stay competitive.",
+    "synonyms": [
+      "invent",
+      "modernize"
+    ],
+    "antonyms": [
+      "stagnate"
+    ],
+    "topic": "business",
+    "level": "B2"
+  },
+  {
+    "word": "revenue",
+    "phonetic": "ˈrevənjuː",
+    "part_of_speech": "noun",
+    "meaning": "doanh thu",
+    "example": "Annual revenue grew by 20%.",
+    "synonyms": [
+      "income",
+      "earnings"
+    ],
+    "antonyms": [
+      "expense"
+    ],
+    "topic": "business",
+    "level": "B2"
+  },
+  {
+    "word": "strategy",
+    "phonetic": "ˈstrætədʒi",
+    "part_of_speech": "noun",
+    "meaning": "chiến lược",
+    "example": "We need a new marketing strategy.",
+    "synonyms": [
+      "plan",
+      "tactic"
+    ],
+    "antonyms": [],
+    "topic": "business",
+    "level": "B1"
+  },
+  {
+    "word": "algorithm",
+    "phonetic": "ˈælɡərɪðəm",
+    "part_of_speech": "noun",
+    "meaning": "thuật toán",
+    "example": "The algorithm sorts the data efficiently.",
+    "synonyms": [
+      "procedure",
+      "formula"
+    ],
+    "antonyms": [],
+    "topic": "technology",
+    "level": "B2"
+  },
+  {
+    "word": "database",
+    "phonetic": "ˈdeɪtəbeɪs",
+    "part_of_speech": "noun",
+    "meaning": "cơ sở dữ liệu",
+    "example": "All records are stored in the database.",
+    "synonyms": [
+      "datastore",
+      "repository"
+    ],
+    "antonyms": [],
+    "topic": "technology",
+    "level": "B1"
+  },
+  {
+    "word": "encryption",
+    "phonetic": "ɪnˈkrɪpʃn",
+    "part_of_speech": "noun",
+    "meaning": "mã hóa",
+    "example": "Encryption protects user data.",
+    "synonyms": [
+      "encoding",
+      "cipher"
+    ],
+    "antonyms": [
+      "decryption"
+    ],
+    "topic": "technology",
+    "level": "B2"
+  },
+  {
+    "word": "interface",
+    "phonetic": "ˈɪntəfeɪs",
+    "part_of_speech": "noun",
+    "meaning": "giao diện",
+    "example": "The user interface is very intuitive.",
+    "synonyms": [
+      "frontend",
+      "display"
+    ],
+    "antonyms": [],
+    "topic": "technology",
+    "level": "B1"
+  },
+  {
+    "word": "network",
+    "phonetic": "ˈnetwɜːk",
+    "part_of_speech": "noun",
+    "meaning": "mạng lưới",
+    "example": "The servers are connected to a secure network.",
+    "synonyms": [
+      "system",
+      "grid"
+    ],
+    "antonyms": [],
+    "topic": "technology",
+    "level": "A2"
+  },
+  {
+    "word": "software",
+    "phonetic": "ˈsɒftweə",
+    "part_of_speech": "noun",
+    "meaning": "phần mềm",
+    "example": "We updated the software last night.",
+    "synonyms": [
+      "program",
+      "application"
+    ],
+    "antonyms": [
+      "hardware"
+    ],
+    "topic": "technology",
+    "level": "A2"
+  },
+  {
+    "word": "virtual",
+    "phonetic": "ˈvɜːtʃuəl",
+    "part_of_speech": "adjective",
+    "meaning": "ảo, thực tế ảo",
+    "example": "They held a virtual meeting.",
+    "synonyms": [
+      "digital",
+      "simulated"
+    ],
+    "antonyms": [
+      "physical"
+    ],
+    "topic": "technology",
+    "level": "B1"
+  },
+  {
+    "word": "hypothesis",
+    "phonetic": "haɪˈpɒθəsɪs",
+    "part_of_speech": "noun",
+    "meaning": "giả thuyết",
+    "example": "The experiment tested the hypothesis.",
+    "synonyms": [
+      "theory",
+      "assumption"
+    ],
+    "antonyms": [
+      "fact"
+    ],
+    "topic": "science",
+    "level": "B2"
+  },
+  {
+    "word": "molecule",
+    "phonetic": "ˈmɒlɪkjuːl",
+    "part_of_speech": "noun",
+    "meaning": "phân tử",
+    "example": "Water molecules consist of hydrogen and oxygen.",
+    "synonyms": [
+      "particle",
+      "unit"
+    ],
+    "antonyms": [],
+    "topic": "science",
+    "level": "B1"
+  },
+  {
+    "word": "evolution",
+    "phonetic": "ˌiːvəˈluːʃn",
+    "part_of_speech": "noun",
+    "meaning": "sự tiến hóa",
+    "example": "Evolution explains the diversity of life.",
+    "synonyms": [
+      "development",
+      "adaptation"
+    ],
+    "antonyms": [
+      "stagnation"
+    ],
+    "topic": "science",
+    "level": "B2"
+  },
+  {
+    "word": "experiment",
+    "phonetic": "ɪkˈsperɪmənt",
+    "part_of_speech": "noun",
+    "meaning": "thí nghiệm",
+    "example": "The experiment yielded surprising results.",
+    "synonyms": [
+      "test",
+      "trial"
+    ],
+    "antonyms": [],
+    "topic": "science",
+    "level": "A2"
+  },
+  {
+    "word": "gravity",
+    "phonetic": "ˈɡrævəti",
+    "part_of_speech": "noun",
+    "meaning": "trọng lực",
+    "example": "Gravity keeps us on the ground.",
+    "synonyms": [
+      "pull",
+      "attraction"
+    ],
+    "antonyms": [],
+    "topic": "science",
+    "level": "B1"
+  },
+  {
+    "word": "analysis",
+    "phonetic": "əˈnæləsɪs",
+    "part_of_speech": "noun",
+    "meaning": "phân tích",
+    "example": "The analysis revealed several trends.",
+    "synonyms": [
+      "examination",
+      "study"
+    ],
+    "antonyms": [
+      "synthesis"
+    ],
+    "topic": "academic",
+    "level": "B1"
+  },
+  {
+    "word": "concept",
+    "phonetic": "ˈkɒnsept",
+    "part_of_speech": "noun",
+    "meaning": "khái niệm",
+    "example": "The concept is difficult to grasp.",
+    "synonyms": [
+      "idea",
+      "notion"
+    ],
+    "antonyms": [],
+    "topic": "academic",
+    "level": "B1"
+  },
+  {
+    "word": "evidence",
+    "phonetic": "ˈevɪdəns",
+    "part_of_speech": "noun",
+    "meaning": "bằng chứng",
+    "example": "There is strong evidence for this claim.",
+    "synonyms": [
+      "proof",
+      "data"
+    ],
+    "antonyms": [],
+    "topic": "academic",
+    "level": "B1"
+  },
+  {
+    "word": "research",
+    "phonetic": "rɪˈsɜːtʃ",
+    "part_of_speech": "noun",
+    "meaning": "nghiên cứu",
+    "example": "Her research focuses on climate change.",
+    "synonyms": [
+      "study",
+      "investigation"
+    ],
+    "antonyms": [],
+    "topic": "academic",
+    "level": "A2"
+  },
+  {
+    "word": "theory",
+    "phonetic": "ˈθɪəri",
+    "part_of_speech": "noun",
+    "meaning": "lý thuyết",
+    "example": "The theory was later disproved.",
+    "synonyms": [
+      "hypothesis",
+      "concept"
+    ],
+    "antonyms": [
+      "fact"
+    ],
+    "topic": "academic",
+    "level": "B1"
+  },
+  {
+    "word": "airport",
+    "phonetic": "ˈeəpɔːt",
+    "part_of_speech": "noun",
+    "meaning": "sân bay",
+    "example": "We arrived at the airport early.",
+    "synonyms": [
+      "terminal",
+      "aerodrome"
+    ],
+    "antonyms": [],
+    "topic": "travel",
+    "level": "A1"
+  },
+  {
+    "word": "destination",
+    "phonetic": "ˌdestɪˈneɪʃn",
+    "part_of_speech": "noun",
+    "meaning": "điểm đến",
+    "example": "Paris is a popular destination.",
+    "synonyms": [
+      "endpoint",
+      "target"
+    ],
+    "antonyms": [
+      "origin"
+    ],
+    "topic": "travel",
+    "level": "A2"
+  },
+  {
+    "word": "itinerary",
+    "phonetic": "aɪˈtɪnərəri",
+    "part_of_speech": "noun",
+    "meaning": "lịch trình chuyến đi",
+    "example": "She planned a detailed itinerary.",
+    "synonyms": [
+      "schedule",
+      "plan"
+    ],
+    "antonyms": [],
+    "topic": "travel",
+    "level": "B2"
+  },
+  {
+    "word": "luggage",
+    "phonetic": "ˈlʌɡɪdʒ",
+    "part_of_speech": "noun",
+    "meaning": "hành lý",
+    "example": "Please keep your luggage with you.",
+    "synonyms": [
+      "baggage",
+      "bags"
+    ],
+    "antonyms": [],
+    "topic": "travel",
+    "level": "A2"
+  },
+  {
+    "word": "passport",
+    "phonetic": "ˈpɑːspɔːt",
+    "part_of_speech": "noun",
+    "meaning": "hộ chiếu",
+    "example": "Don't forget your passport.",
+    "synonyms": [
+      "document",
+      "ID"
+    ],
+    "antonyms": [],
+    "topic": "travel",
+    "level": "A1"
+  },
+  {
+    "word": "reservation",
+    "phonetic": "ˌrezəˈveɪʃn",
+    "part_of_speech": "noun",
+    "meaning": "sự đặt trước",
+    "example": "I made a reservation for two.",
+    "synonyms": [
+      "booking",
+      "appointment"
+    ],
+    "antonyms": [
+      "cancellation"
+    ],
+    "topic": "travel",
+    "level": "A2"
+  },
+  {
+    "word": "souvenir",
+    "phonetic": "ˌsuːvəˈnɪə",
+    "part_of_speech": "noun",
+    "meaning": "quà lưu niệm",
+    "example": "I bought a souvenir for my family.",
+    "synonyms": [
+      "keepsake",
+      "memento"
+    ],
+    "antonyms": [],
+    "topic": "travel",
+    "level": "A2"
+  },
+  {
+    "word": "appointment",
+    "phonetic": "əˈpɔɪntmənt",
+    "part_of_speech": "noun",
+    "meaning": "cuộc hẹn",
+    "example": "I have a dentist appointment today.",
+    "synonyms": [
+      "meeting",
+      "engagement"
+    ],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A2"
+  },
+  {
+    "word": "grocery",
+    "phonetic": "ˈɡrəʊsəri",
+    "part_of_speech": "noun",
+    "meaning": "tạp hóa",
+    "example": "I need to buy groceries for dinner.",
+    "synonyms": [
+      "food",
+      "supplies"
+    ],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A2"
+  },
+  {
+    "word": "laundry",
+    "phonetic": "ˈlɔːndri",
+    "part_of_speech": "noun",
+    "meaning": "giặt ủi",
+    "example": "I do the laundry every weekend.",
+    "synonyms": [
+      "washing",
+      "clothes"
+    ],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A2"
+  },
+  {
+    "word": "neighbor",
+    "phonetic": "ˈneɪbə",
+    "part_of_speech": "noun",
+    "meaning": "hàng xóm",
+    "example": "Our neighbor is very friendly.",
+    "synonyms": [
+      "resident",
+      "local"
+    ],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A1"
+  },
+  {
+    "word": "schedule",
+    "phonetic": "ˈʃedjuːl",
+    "part_of_speech": "noun",
+    "meaning": "lịch trình, thời khóa biểu",
+    "example": "My schedule is packed this week.",
+    "synonyms": [
+      "timetable",
+      "agenda"
+    ],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A2"
+  },
+  {
+    "word": "routine",
+    "phonetic": "ruːˈtiːn",
+    "part_of_speech": "noun",
+    "meaning": "thói quen, lịch trình đều đặn",
+    "example": "Exercise is part of my daily routine.",
+    "synonyms": [
+      "habit",
+      "pattern"
+    ],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "B1"
+  },
+  {
+    "word": "happy",
+    "phonetic": "/?h?p.i/",
+    "part_of_speech": "adjective",
+    "meaning": "hạnh phúc, vui vẻ",
+    "example": "Music makes me feel happy.",
+    "synonyms": [
+      "cheerful",
+      "content",
+      "delighted",
+      "elated",
+      "exultant"
+    ],
+    "antonyms": [
+      "inappropriate",
+      "inapt",
+      "unfelicitous",
+      "disenchanted",
+      "dissatisfied"
+    ],
+    "topic": "daily-life",
+    "level": "A1",
+    "cefr_source": "https://dictionary.cambridge.org/dictionary/learner-english/happy",
+    "data_source": "dictionaryapi.dev + Gemini; CEFR provided by CSV",
+    "english_definition": "Having a feeling arising from a consciousness of well-being or of enjoyment; enjoying good of any kind, such as comfort, peace, or tranquillity; blissful, contented, joyous.",
+    "review_status": "human_approved"
+  },
+  {
+    "word": "environment",
+    "phonetic": "/-mɪnt/",
+    "part_of_speech": "noun",
+    "meaning": "The surroundings of, and influences on, a particular item of interest.",
+    "example": "That program uses the Microsoft Windows environment.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A1"
+  },
+  {
+    "word": "opportunity",
+    "phonetic": "/ˌɒp.əˈtjuː.nɪ.tɪ/",
+    "part_of_speech": "noun",
+    "meaning": "A chance for advancement, progress or profit.",
+    "example": "The world is full of opportunities and it's up to me to see them and pursue them.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A1"
+  },
+  {
+    "word": "improve",
+    "phonetic": "/ɪmˈpɹuːv/",
+    "part_of_speech": "verb",
+    "meaning": "To make (something) better; to increase the value or productivity (of something).",
+    "example": "Buying more servers would improve performance.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A1"
+  },
+  {
+    "word": "knowledge",
+    "phonetic": "/ˈnɒlɪdʒ/",
+    "part_of_speech": "noun",
+    "meaning": "The fact of knowing about something; general understanding or familiarity with a subject, place, situation etc.",
+    "example": "His knowledge of Iceland was limited to what he'd seen on the Travel Channel.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A1"
+  },
+  {
+    "word": "technology",
+    "phonetic": "/tɛkˈnɒlədʒi/",
+    "part_of_speech": "noun",
+    "meaning": "The organization of knowledge for practical purposes.",
+    "example": "",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A1"
+  },
+  {
+    "word": "travel",
+    "phonetic": "/ˈtɹævəl/",
+    "part_of_speech": "noun",
+    "meaning": "The act of traveling; passage from place to place.",
+    "example": "space travel",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A1"
+  },
+  {
+    "word": "success",
+    "phonetic": "/səkˈsɛs/",
+    "part_of_speech": "noun",
+    "meaning": "The achievement of one's aim or goal.",
+    "example": "His third attempt to pass the entrance exam was a success.",
+    "synonyms": [],
+    "antonyms": [
+      "failure"
+    ],
+    "topic": "daily-life",
+    "level": "A1"
+  },
+  {
+    "word": "challenge",
+    "phonetic": "/ˈtʃæl.əndʒ/",
+    "part_of_speech": "noun",
+    "meaning": "A confrontation; a dare.",
+    "example": "We challenged the boys next door to a game of football.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A1"
+  },
+  {
+    "word": "customer",
+    "phonetic": "/ˈkʌstəmə/",
+    "part_of_speech": "noun",
+    "meaning": "A patron, a client; one who purchases or receives a product or service from a business or merchant, or intends to do so.",
+    "example": "Every person who passes by is a potential customer.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "daily-life",
+    "level": "A1"
+  }
+]
