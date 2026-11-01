@@ -114,33 +114,61 @@ async def list_lessons(user_id: str) -> list[dict]:
 
     lessons: list[dict] = []
     for topic, items in by_topic.items():
-        items.sort(key=lambda x: LEVEL_ORDER.get(x["level"], 99))
+        by_level = {item["level"]: item for item in items}
+        topic_title = _topic_title(topic)
 
-        # Bắt đầu từ trình độ của người học (nếu có trong topic), nếu không thì từ thấp nhất
-        levels = [i["level"] for i in items]
-        start = 0
-        if user_level in levels:
-            start = levels.index(user_level)
+        # Luôn hiển thị đủ 6 cấp độ A1 -> C2 cho mỗi lĩnh vực.
+        real_levels = sorted(by_level, key=lambda lv: LEVEL_ORDER.get(lv, 99))
+        lowest_level = real_levels[0] if real_levels else None
 
-        ordered = items[start:] + items[:start]
-
-        prev_completed = True if start == 0 else items[start - 1]["completed"]
-        for idx, item in enumerate(ordered):
-            level = item["level"]
+        for level in LEVEL_ORDER:
+            item = by_level.get(level)
             is_current = user_level == level
-            if idx == 0:
-                unlocked = True if start == 0 else prev_completed
-            else:
-                unlocked = ordered[idx - 1]["completed"]
+
+            if item is None:
+                # Cấp độ chưa có từ vựng: hiển thị nhưng chưa mở khóa.
+                lessons.append(
+                    {
+                        "id": _slug(topic, level),
+                        "slug": _slug(topic, level),
+                        "title": f"{topic_title} - {level}",
+                        "topic": topic,
+                        "topic_title": topic_title,
+                        "level": level,
+                        "description": f"Nội dung {topic_title} cấp độ {level} đang được cập nhật",
+                        "word_count": 0,
+                        "order": 0,
+                        "learned_count": 0,
+                        "progress_percent": 0,
+                        "completed": False,
+                        "recommended": False,
+                        "unlocked": False,
+                    }
+                )
+                continue
+
+            # Cấp thấp nhất luôn mở; các cấp sau mở khi cấp liền trước đã hoàn thành.
+            # Cấp hiện tại của người học luôn được mở để họ có thể bắt đầu.
+            prev_level = None
+            for candidate in reversed(real_levels):
+                if LEVEL_ORDER[candidate] < LEVEL_ORDER[level]:
+                    prev_level = candidate
+                    break
+            unlocked = (
+                level == lowest_level
+                or is_current
+                or (prev_level is not None and by_level[prev_level]["completed"])
+            )
+
             lessons.append(
                 {
                     "id": _slug(topic, level),
                     "slug": _slug(topic, level),
-                    "title": f"{_topic_title(topic)} - {level}",
+                    "title": f"{topic_title} - {level}",
                     "topic": topic,
-                    "topic_title": _topic_title(topic),
+                    "topic_title": topic_title,
                     "level": level,
-                    "description": f"{item['total']} từ vựng {_topic_title(topic)} cấp độ {level}",
+                    "description": f"{item['total']} từ vựng {topic_title} cấp độ {level}",
                     "word_count": item["total"],
                     "order": 0,
                     "learned_count": item["learned"],

@@ -1,8 +1,7 @@
-import re
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from pymongo import UpdateOne
+from pymongo import ReturnDocument, UpdateOne
 
 from app.db.mongodb import get_database
 from app.models.vocabulary import VocabularyCreate, VocabularyUpdate
@@ -56,11 +55,16 @@ async def create_vocabulary(data: VocabularyCreate) -> dict:
     db = get_database()
     now = datetime.now(timezone.utc)
     doc = data.model_dump()
-    doc["created_at"] = now
+    doc["word"] = doc["word"].strip()
+    doc["word_key"] = doc["word"].lower()
     doc["updated_at"] = now
-    result = await db[COLLECTION].insert_one(doc)
-    doc["_id"] = result.inserted_id
-    return _serialize(doc)
+    saved = await db[COLLECTION].find_one_and_update(
+        {"word_key": doc["word_key"]},
+        {"$set": doc, "$setOnInsert": {"created_at": now}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    return _serialize(saved)
 
 
 async def update_vocabulary(vocab_id: str, data: VocabularyUpdate) -> dict | None:
@@ -68,9 +72,14 @@ async def update_vocabulary(vocab_id: str, data: VocabularyUpdate) -> dict | Non
     update = {k: v for k, v in data.model_dump(exclude_none=True).items()}
     if not update:
         return await get_vocabulary(vocab_id)
+    if "word" in update:
+        update["word"] = update["word"].strip()
+        update["word_key"] = update["word"].lower()
     update["updated_at"] = datetime.now(timezone.utc)
     doc = await db[COLLECTION].find_one_and_update(
-        {"_id": ObjectId(vocab_id)}, {"$set": update}, return_document=True
+        {"_id": ObjectId(vocab_id)},
+        {"$set": update},
+        return_document=ReturnDocument.AFTER,
     )
     return _serialize(doc) if doc else None
 
@@ -93,36 +102,29 @@ async def create_vocabularies_bulk(items: list[dict]) -> dict:
 
     now = datetime.now(timezone.utc)
 
-    unique_words: list[str] = []
-    seen: set[str] = set()
+    items_by_key: dict[str, dict] = {}
     for item in items:
         word = (item.get("word") or "").strip()
         key = word.lower()
-        if not word or key in seen:
+        if not word or key in items_by_key:
             continue
-        seen.add(key)
-        unique_words.append(word)
+        items_by_key[key] = {**item, "word": word}
 
-    if not unique_words:
+    if not items_by_key:
         return {"saved": 0, "created": 0, "updated": 0}
 
     # Chi quet nhung tu trong batch (khong scan ca collection)
-    pattern = "^(" + "|".join(re.escape(w) for w in unique_words) + ")$"
     existing: dict[str, ObjectId] = {}
     async for doc in db[COLLECTION].find(
-        {"word": {"$regex": pattern, "$options": "i"}}, {"word": 1}
+        {"word_key": {"$in": list(items_by_key)}}, {"word_key": 1}
     ):
-        key = (doc.get("word") or "").strip().lower()
-        existing.setdefault(key, doc["_id"])
+        existing[doc["word_key"]] = doc["_id"]
 
     operations = []
     created = updated = 0
-    for item in items:
-        word = (item.get("word") or "").strip()
-        if not word:
-            continue
-        payload = {**item, "word": word, "updated_at": now}
-        current_id = existing.get(word.lower())
+    for key, item in items_by_key.items():
+        payload = {**item, "word_key": key, "updated_at": now}
+        current_id = existing.get(key)
         if current_id is not None:
             operations.append(
                 UpdateOne(
@@ -134,7 +136,7 @@ async def create_vocabularies_bulk(items: list[dict]) -> dict:
         else:
             operations.append(
                 UpdateOne(
-                    {"word": word},
+                    {"word_key": key},
                     {"$set": payload, "$setOnInsert": {"created_at": now}},
                     upsert=True,
                 )

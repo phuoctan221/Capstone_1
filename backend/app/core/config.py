@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
 
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-flash-latest"
+    GEMINI_MODEL: str = "gemini-3.8-flash"
+    GEMINI_RPM: int = 10
+    DICTIONARY_RPM: int = 30
 
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 

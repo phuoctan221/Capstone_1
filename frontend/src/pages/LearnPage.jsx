@@ -89,7 +89,11 @@ export default function LearnPage() {
                       <h3>{l.title}</h3>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
                         {l.recommended && <span className="badge">Đề xuất</span>}
-                        {l.unlocked === false && <span className="badge">Khóa</span>}
+                        {l.word_count === 0 ? (
+                          <span className="badge">Sắp có</span>
+                        ) : (
+                          l.unlocked === false && <span className="badge">Khóa</span>
+                        )}
                         <span className="badge">{l.level}</span>
                       </div>
                     </div>
@@ -101,9 +105,13 @@ export default function LearnPage() {
                       />
                     </div>
                     <p className="muted" style={{ fontSize: "0.8rem" }}>
-                      {l.learned_count}/{l.word_count} từ đã thuộc
+                      {l.word_count === 0
+                        ? "Nội dung sẽ sớm được cập nhật"
+                        : `${l.learned_count}/${l.word_count} từ đã thuộc`}
                       {l.completed && " · Đã hoàn thành"}
-                      {l.unlocked === false && " · Hoàn thành cấp trước để mở khóa"}
+                      {l.word_count > 0 &&
+                        l.unlocked === false &&
+                        " · Hoàn thành cấp trước để mở khóa"}
                     </p>
                   </div>
                 </div>
