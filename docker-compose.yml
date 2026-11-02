@@ -1,0 +1,54 @@
+name: smartvocab
+
+x-backend: &backend-base
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  env_file:
+    - ./backend/.env
+  expose:
+    - "8000"
+  networks:
+    - smartvocab
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+    interval: 15s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+
+services:
+  api1:
+    <<: *backend-base
+    container_name: smartvocab-api1
+
+  api2:
+    <<: *backend-base
+    container_name: smartvocab-api2
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: smartvocab-web
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      api1:
+        condition: service_healthy
+      api2:
+        condition: service_healthy
+    networks:
+      - smartvocab
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  smartvocab:
+    driver: bridge
