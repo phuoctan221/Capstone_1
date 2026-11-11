@@ -42,27 +42,54 @@ async def submit_quiz(
     if total == 0:
         raise HTTPException(status_code=400, detail="Empty quiz submission")
 
-    correct = sum(1 for r in payload.results if r.correct)
-
-    for r in payload.results:
-        if r.correct:
-            await progress_service.mark_word_correct(user["id"], r.vocabulary_id)
-        else:
-            await progress_service.mark_word_wrong(user["id"], r.vocabulary_id)
+    # Questions are stored server-side; the client cannot declare correctness.
+    db = progress_service.get_database()
+    correct = 0
+    xp_gained = 0
+    for item in payload.results:
+        question = await db.quiz_questions.find_one({
+            "question_id": item.question_token,
+            "user_id": user["id"],
+            "lesson_id": lesson_id,
+        })
+        if not question:
+            raise HTTPException(status_code=400, detail="Invalid quiz question")
+        from datetime import datetime, timezone
+        expires = question["expires_at"]
+        if expires.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="Quiz question expired")
+        if question["vocabulary_id"] != item.vocabulary_id:
+            raise HTTPException(status_code=400, detail="Quiz question mismatch")
+        try:
+            outcome = await progress_service.process_study_answer(
+                user_id=user["id"],
+                vocabulary_id=item.vocabulary_id,
+                answer=item.user_answer,
+                skill=question["skill"],
+                attempt_id=item.question_token,
+                response_time_ms=item.response_time_ms,
+                hint_used=item.hint_used,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        correct += int(outcome["correct"])
+        xp_gained += outcome["xp_gained"]
 
     percent = round(correct / total * 100)
     passed = percent >= 70
-    xp_gained = correct * progress_service.XP_PER_CORRECT
     if passed:
-        xp_gained += progress_service.XP_PER_LESSON_BONUS
         lesson = await lesson_service.get_lesson(lesson_id, user["id"])
         if lesson:
             await progress_service.complete_lesson(
-                user["id"], lesson["topic"], True
+                user["id"],
+                lesson_id,
+                lesson["topic"],
+                True,
+                lesson.get("learned_count", 0),
+                lesson.get("mastered_count", 0),
             )
 
-    progress = await progress_service.add_xp(user["id"], xp_gained)
-
+    progress = await progress_service.get_user_progress(user["id"])
     return {
         "correct": correct,
         "total": total,

@@ -847,5 +847,243 @@
     "antonyms": [],
     "topic": "daily-life",
     "level": "A1"
+  },
+  {
+    "word": "apple",
+    "phonetic": "/ˈæp.əl/",
+    "part_of_speech": "noun",
+    "meaning": "quả táo",
+    "example": "She eats an apple every morning.",
+    "synonyms": [
+      "fruit"
+    ],
+    "antonyms": [],
+    "topic": "general",
+    "domain": "general",
+    "level": "A1"
+  },
+  {
+    "word": "book",
+    "phonetic": "/bʊk/",
+    "part_of_speech": "noun",
+    "meaning": "quyển sách",
+    "example": "I read a book before bed.",
+    "synonyms": [
+      "volume"
+    ],
+    "antonyms": [],
+    "topic": "general",
+    "domain": "general",
+    "level": "A1"
+  },
+  {
+    "word": "chair",
+    "phonetic": "/tʃeər/",
+    "part_of_speech": "noun",
+    "meaning": "cái ghế",
+    "example": "Please sit on this chair.",
+    "synonyms": [
+      "seat"
+    ],
+    "antonyms": [],
+    "topic": "general",
+    "domain": "general",
+    "level": "A1"
+  },
+  {
+    "word": "water",
+    "phonetic": "/ˈwɔː.tər/",
+    "part_of_speech": "noun",
+    "meaning": "nước",
+    "example": "Drink more water every day.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "general",
+    "domain": "general",
+    "level": "A1"
+  },
+  {
+    "word": "family",
+    "phonetic": "/ˈfæm.əl.i/",
+    "part_of_speech": "noun",
+    "meaning": "gia đình",
+    "example": "My family lives in Hanoi.",
+    "synonyms": [
+      "household"
+    ],
+    "antonyms": [],
+    "topic": "general",
+    "domain": "general",
+    "level": "A1"
+  },
+  {
+    "word": "school",
+    "phonetic": "/skuːl/",
+    "part_of_speech": "noun",
+    "meaning": "trường học",
+    "example": "The children walk to school together.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "general",
+    "domain": "general",
+    "level": "A1"
+  },
+  {
+    "word": "browser",
+    "phonetic": "/ˈbraʊ.zər/",
+    "part_of_speech": "noun",
+    "meaning": "trình duyệt",
+    "example": "Open the link in your browser.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "technology",
+    "domain": "technology",
+    "level": "A2"
+  },
+  {
+    "word": "keyboard",
+    "phonetic": "/ˈkiː.bɔːd/",
+    "part_of_speech": "noun",
+    "meaning": "bàn phím",
+    "example": "She typed the code on a new keyboard.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "technology",
+    "domain": "technology",
+    "level": "A2"
+  },
+  {
+    "word": "monitor",
+    "phonetic": "/ˈmɒn.ɪ.tər/",
+    "part_of_speech": "noun",
+    "meaning": "màn hình",
+    "example": "The monitor shows the system status.",
+    "synonyms": [
+      "screen"
+    ],
+    "antonyms": [],
+    "topic": "technology",
+    "domain": "technology",
+    "level": "A2"
+  },
+  {
+    "word": "password",
+    "phonetic": "/ˈpɑːs.wɜːd/",
+    "part_of_speech": "noun",
+    "meaning": "mật khẩu",
+    "example": "Choose a strong password for your account.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "technology",
+    "domain": "technology",
+    "level": "A2"
+  },
+  {
+    "word": "server",
+    "phonetic": "/ˈsɜː.vər/",
+    "part_of_speech": "noun",
+    "meaning": "máy chủ",
+    "example": "The application runs on a remote server.",
+    "synonyms": [
+      "host"
+    ],
+    "antonyms": [],
+    "topic": "technology",
+    "domain": "technology",
+    "level": "A2"
+  },
+  {
+    "word": "framework",
+    "phonetic": "/ˈfreɪm.wɜːk/",
+    "part_of_speech": "noun",
+    "meaning": "khung làm việc, framework",
+    "example": "The team uses a modern web framework.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "technology",
+    "domain": "technology",
+    "level": "B1"
+  },
+  {
+    "word": "deployment",
+    "phonetic": "/dɪˈplɔɪ.mənt/",
+    "part_of_speech": "noun",
+    "meaning": "triển khai",
+    "example": "The deployment finished without errors.",
+    "synonyms": [
+      "release"
+    ],
+    "antonyms": [],
+    "topic": "technology",
+    "domain": "technology",
+    "level": "B1"
+  },
+  {
+    "word": "repository",
+    "phonetic": "/rɪˈpɒz.ɪ.tər.i/",
+    "part_of_speech": "noun",
+    "meaning": "kho mã nguồn",
+    "example": "Clone the repository before you start.",
+    "synonyms": [
+      "repo"
+    ],
+    "antonyms": [],
+    "topic": "technology",
+    "domain": "technology",
+    "level": "B1"
+  },
+  {
+    "word": "invoice",
+    "phonetic": "/ˈɪn.vɔɪs/",
+    "part_of_speech": "noun",
+    "meaning": "hóa đơn",
+    "example": "Please send the invoice to the client.",
+    "synonyms": [
+      "bill"
+    ],
+    "antonyms": [],
+    "topic": "business",
+    "domain": "business",
+    "level": "A2"
+  },
+  {
+    "word": "receipt",
+    "phonetic": "/rɪˈsiːt/",
+    "part_of_speech": "noun",
+    "meaning": "biên lai",
+    "example": "Keep the receipt for your expense report.",
+    "synonyms": [],
+    "antonyms": [],
+    "topic": "business",
+    "domain": "business",
+    "level": "A2"
+  },
+  {
+    "word": "supplier",
+    "phonetic": "/səˈplaɪ.ər/",
+    "part_of_speech": "noun",
+    "meaning": "nhà cung cấp",
+    "example": "The supplier delivers materials every Monday.",
+    "synonyms": [
+      "vendor"
+    ],
+    "antonyms": [],
+    "topic": "business",
+    "domain": "business",
+    "level": "A2"
+  },
+  {
+    "word": "warehouse",
+    "phonetic": "/ˈweə.haʊs/",
+    "part_of_speech": "noun",
+    "meaning": "nhà kho",
+    "example": "The goods are stored in the warehouse.",
+    "synonyms": [
+      "store"
+    ],
+    "antonyms": [],
+    "topic": "business",
+    "domain": "business",
+    "level": "A2"
   }
 ]

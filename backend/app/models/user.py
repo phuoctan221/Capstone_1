@@ -17,11 +17,14 @@ class UserOut(BaseModel):
     id: str
     email: str
     username: str
+    role: str = "user"
     created_at: datetime
     learning_level: str | None = None
     interests: list[str] = []
     onboarded: bool = False
     daily_goal: int = 10
+    xp: int = 0
+    streak: int = 0
     profile_completed_at: datetime | None = None
     updated_at: datetime | None = None
 

@@ -1,165 +1,67 @@
-import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { fetchQuiz, submitQuiz, fetchLesson } from "../services/lessonService";
+import { useEffect, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { fetchLesson, fetchQuiz, submitQuiz } from "../services/lessonService";
+import { formatApiError } from "../constants/domains";
+import { EmptyState, PageError, PageLoading } from "../components/PageState";
 
 export default function QuizPage() {
   const { lessonId } = useParams();
-  const navigate = useNavigate();
   const [lesson, setLesson] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
+  const [durations, setDurations] = useState({});
   const [index, setIndex] = useState(0);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [refresh, setRefresh] = useState(0);
+  const startedAt = useRef(Date.now());
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [les, quiz] = await Promise.all([
-          fetchLesson(lessonId),
-          fetchQuiz(lessonId, 10),
-        ]);
-        setLesson(les);
-        setQuestions(quiz.questions);
-      } catch {
-        navigate(`/lessons/${lessonId}`);
-      }
-      setLoading(false);
-    })();
-  }, [lessonId, navigate]);
+    let active = true;
+    setLoading(true);
+    Promise.all([fetchLesson(lessonId), fetchQuiz(lessonId, 10)])
+      .then(([lessonData, quizData]) => { if (active) { setLesson(lessonData); setQuestions(quizData?.questions || []); setError(""); } })
+      .catch((err) => { if (active) setError(formatApiError(err, "Không thể tạo bài kiểm tra. Có thể bài học thiếu từ vựng.")); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [lessonId, refresh]);
 
-  const choose = (option) => {
-    setAnswers({ ...answers, [index]: option });
-  };
+  useEffect(() => { startedAt.current = Date.now(); }, [index]);
 
-  const finish = async () => {
-    setSubmitting(true);
-    const results = questions.map((q, i) => ({
-      vocabulary_id: q.vocabulary_id,
-      correct: answers[i] === q.answer,
-      correct_answer: q.answer,
-      user_answer: answers[i] || "",
-    }));
-    try {
-      const res = await submitQuiz(lessonId, results);
-      setResult(res);
-    } catch {
-      setResult({ error: true });
-    }
-    setSubmitting(false);
-  };
-
-  if (loading) return <p className="muted">Đang chuẩn bị bài kiểm tra...</p>;
-
-  if (result) {
-    if (result.error)
-      return <p className="error">Nộp bài thất bại, vui lòng thử lại.</p>;
-
-    return (
-      <div className="card result-card">
-        <div className={`result-badge ${result.passed ? "pass" : "fail"}`}>
-          {result.passed ? "🎉 Đạt!" : "Cố lên!"}
-        </div>
-        <h1>
-          {result.correct}/{result.total} câu đúng
-        </h1>
-        <p className="result-percent">{result.percent}%</p>
-
-        <div className="result-stats">
-          <div className="result-stat">
-            <div className="number">+{result.xp_gained}</div>
-            <div className="label">XP nhận được</div>
-          </div>
-          <div className="result-stat">
-            <div className="number">Lv {result.new_level}</div>
-            <div className="label">Cấp độ</div>
-          </div>
-          <div className="result-stat">
-            <div className="number">{result.streak}🔥</div>
-            <div className="label">Chuỗi ngày</div>
-          </div>
-        </div>
-
-        <div className="result-actions">
-          <Link to={`/lessons/${lessonId}`} className="btn">
-            Học tiếp
-          </Link>
-          <Link to="/learn" className="btn btn-outline">
-            Về lộ trình
-          </Link>
-        </div>
-      </div>
-    );
+  function choose(option) {
+    if (submitting) return;
+    setAnswers((old) => ({ ...old, [index]: option }));
+    setDurations((old) => ({ ...old, [index]: old[index] ?? Math.min(600000, Date.now() - startedAt.current) }));
+    setError("");
   }
 
-  const q = questions[index];
-  const done = index + 1 >= questions.length;
-  const answeredCount = Object.keys(answers).length;
+  async function finish() {
+    if (submitting || questions.some((_, i) => answers[i] == null)) return;
+    setSubmitting(true); setError("");
+    const rows = questions.map((question, i) => ({
+      vocabulary_id: question.vocabulary_id,
+      question_token: question.question_token,
+      user_answer: answers[i],
+      response_time_ms: Math.min(600000, Math.max(0, Math.round(durations[i] ?? 0))),
+      hint_used: false,
+    }));
+    try { setResult(await submitQuiz(lessonId, rows)); }
+    catch (err) { setError(formatApiError(err, "Nộp bài không thành công. Bạn có thể thử lại với cùng các câu hỏi.")); }
+    finally { setSubmitting(false); }
+  }
 
-  return (
-    <div>
-      <div className="study-header">
-        <Link to={`/lessons/${lessonId}`} className="btn btn-outline">
-          ← Thoát
-        </Link>
-        <div className="muted">
-          Kiểm tra: {lesson?.title} · {index + 1}/{questions.length}
-        </div>
-      </div>
+  if (loading) return <PageLoading label="Đang chuẩn bị bài kiểm tra..."/>;
+  if (!lesson || !questions.length) return <div className="sv-page"><div className="sv-breadcrumb"><Link to={`/lessons/${lessonId}`}>← Quay lại bài học</Link></div>{error ? <PageError message={error} onRetry={() => setRefresh((value)=>value+1)}/> : <EmptyState title="Chưa có câu hỏi" description="Lesson cần có ít nhất hai từ vựng để tạo quiz."/>}</div>;
+  if (result) return <div className="sv-page"><div className="sv-practice-result"><span className="sv-success-symbol">{result.passed ? "✓" : "↗"}</span><span className="sv-eyebrow">KẾT QUẢ BÀI KIỂM TRA</span><h1>{result.passed ? "Hoàn thành xuất sắc!" : "Hãy luyện tập thêm nhé!"}</h1><p>Điểm đã được backend chấm và cập nhật.</p><div className="sv-result-grid"><div><strong>{result.correct}/{result.total}</strong><span>Trả lời đúng</span></div><div><strong>{result.percent}%</strong><span>Độ chính xác</span></div><div><strong>+{result.xp_gained}</strong><span>XP nhận được</span></div></div><div className="sv-result-actions"><Link className="sv-btn sv-btn-outline" to={`/lessons/${lessonId}`}>Quay về bài học</Link><Link className="sv-btn sv-btn-primary" to="/dashboard">Xem tổng quan →</Link></div></div></div>;
 
-      <div className="card study-card">
-        <p className="study-question">{q.question}</p>
-        <div className="choice-grid">
-          {q.options.map((opt, i) => (
-            <button
-              key={i}
-              className={`choice ${answers[index] === opt ? "selected" : ""}`}
-              onClick={() => choose(opt)}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-
-        <div className="study-footer">
-          {index > 0 && (
-            <button
-              className="btn btn-outline"
-              onClick={() => setIndex(index - 1)}
-            >
-              ← Trước
-            </button>
-          )}
-          {!done ? (
-            <button
-              className="btn"
-              disabled={answers[index] === undefined}
-              onClick={() => setIndex(index + 1)}
-            >
-              Câu tiếp →
-            </button>
-          ) : (
-            <button
-              className="btn"
-              disabled={answeredCount < questions.length || submitting}
-              onClick={finish}
-            >
-              {submitting ? "Đang nộp..." : "Nộp bài"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="study-progress">
-        <div
-          className="study-progress-fill"
-          style={{ width: `${((index + 1) / questions.length) * 100}%` }}
-        />
-      </div>
-      <p className="muted" style={{ textAlign: "center", marginTop: "0.5rem" }}>
-        Đã trả lời {answeredCount}/{questions.length} câu
-      </p>
+  const question = questions[index];
+  const answeredCount = questions.filter((_, i) => answers[i] !== undefined).length;
+  return <div className="sv-page sv-practice-page"><div className="sv-practice-top"><Link className="sv-back-link" to={`/lessons/${lessonId}`}>← Thoát kiểm tra</Link><span className="sv-level-tag">Quiz · {index+1}/{questions.length}</span></div><div className="sv-progress-track"><div style={{width:`${(index+1)/questions.length*100}%`}}/></div>
+    <div className="sv-practice-panel"><div className="sv-practice-heading"><span className="sv-eyebrow">KIỂM TRA CUỐI BÀI · {lesson.title}</span><span className="sv-question-number">{String(index+1).padStart(2,"0")}</span></div><h1>{question.question}</h1><p className="sv-practice-tip">Chọn đáp án bạn cho là chính xác.</p><div className="sv-options-grid">{(question.options || []).map((option, i) => <button key={`${i}-${option}`} className={`sv-option${answers[index] === option ? " selected" : ""}`} onClick={() => choose(option)} disabled={submitting}><span className="sv-option-letter">{String.fromCharCode(65+i)}</span>{option}</button>)}</div>
+      {error && <div className="sv-notice sv-notice-error" role="alert">{error}</div>}
+      <div className="sv-quiz-footer"><button className="sv-btn sv-btn-outline" onClick={() => setIndex((value)=>Math.max(0,value-1))} disabled={index===0 || submitting}>← Câu trước</button><span className="sv-muted-small">Đã trả lời {answeredCount}/{questions.length}</span>{index + 1 < questions.length ? <button className="sv-btn sv-btn-primary" disabled={answers[index] === undefined || submitting} onClick={() => setIndex((value)=>value+1)}>Câu tiếp →</button> : <button className="sv-btn sv-btn-primary" disabled={answeredCount < questions.length || submitting} onClick={finish}>{submitting ? "Đang nộp..." : "Nộp bài →"}</button>}</div>
     </div>
-  );
+  </div>;
 }

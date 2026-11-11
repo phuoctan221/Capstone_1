@@ -5,10 +5,11 @@ export async function fetchDueCards() {
   return data;
 }
 
-export async function reviewCard(vocabularyId, remembered) {
+export async function reviewCard(vocabularyId, rating, reviewId) {
   const { data } = await api.post("/learning/review", {
     vocabulary_id: vocabularyId,
-    remembered,
+    rating,
+    review_id: reviewId,
   });
   return data;
 }
