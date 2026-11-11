@@ -28,6 +28,14 @@ def create_access_token(user_id: str) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
+VALID_ROLES = {"user", "admin"}
+
+
+def normalize_role(value: object) -> str:
+    """Only the exact persisted value "admin" grants admin privileges."""
+    return "admin" if str(value or "").strip().lower() == "admin" else "user"
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict:
@@ -58,9 +66,23 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
+    if user.get("is_active") is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Account is locked"
+        )
     user["id"] = str(user.pop("_id"))
     if "interests" not in user or user.get("interests") is None:
         user["interests"] = []
     if "onboarded" not in user:
         user["onboarded"] = False
+    user["role"] = normalize_role(user.get("role"))
+    return user
+
+
+async def require_admin(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
     return user

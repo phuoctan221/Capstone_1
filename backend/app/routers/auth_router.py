@@ -32,11 +32,14 @@ def _user_out(user: dict) -> dict:
         "id": str(user.get("_id") or user.get("email")),
         "email": user.get("email"),
         "username": user.get("username"),
+        "role": auth_service.normalize_role(user.get("role")),
         "created_at": user.get("created_at") or datetime.now(timezone.utc),
         "learning_level": user.get("learning_level"),
         "interests": user.get("interests") or [],
         "onboarded": bool(user.get("onboarded")),
         "daily_goal": user.get("daily_goal") or 10,
+        "xp": int(user.get("xp", 0) or 0),
+        "streak": int(user.get("streak", 0) or 0),
         "profile_completed_at": user.get("profile_completed_at"),
         "updated_at": user.get("updated_at"),
     }
@@ -45,7 +48,8 @@ def _user_out(user: dict) -> dict:
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register(data: UserCreate):
     db = get_database()
-    existing = await db.users.find_one({"email": data.email})
+    email = data.email.strip().lower()
+    existing = await db.users.find_one({"email": email})
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
@@ -53,26 +57,30 @@ async def register(data: UserCreate):
 
     now = datetime.now(timezone.utc)
     user_doc = {
-        "_id": data.email,
-        "email": data.email,
-        "username": data.username,
+        "_id": email,
+        "email": email,
+        "username": data.username.strip(),
         "password_hash": auth_service.hash_password(data.password),
+        "role": "user",
         "created_at": now,
         "learning_level": None,
         "interests": [],
         "onboarded": False,
         "daily_goal": 10,
+        "xp": 0,
+        "streak": 0,
     }
     await db.users.insert_one(user_doc)
 
-    token = auth_service.create_access_token(data.email)
+    token = auth_service.create_access_token(email)
     return Token(access_token=token, user=_user_out(user_doc))
 
 
 @router.post("/login", response_model=Token)
 async def login(data: UserLogin):
     db = get_database()
-    user = await db.users.find_one({"email": data.email})
+    email = data.email.strip().lower()
+    user = await db.users.find_one({"email": email})
     if not user or not auth_service.verify_password(
         data.password, user["password_hash"]
     ):
@@ -80,8 +88,13 @@ async def login(data: UserLogin):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
+    if user.get("is_active") is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.",
+        )
 
-    token = auth_service.create_access_token(data.email)
+    token = auth_service.create_access_token(str(user["_id"]))
     return Token(access_token=token, user=_user_out(user))
 
 

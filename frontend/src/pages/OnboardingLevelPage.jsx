@@ -36,7 +36,7 @@ export default function OnboardingLevelPage() {
             <h2>Chọn trình độ tiếng Anh hiện tại</h2>
             <p>Chúng tôi sẽ đề xuất từ vựng phù hợp với trình độ của bạn.</p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem" }}>
+          <div className="onb-grid">
             {LEVELS.map((l) => (
               <button
                 key={l}
@@ -45,16 +45,15 @@ export default function OnboardingLevelPage() {
                   setLevel(l);
                   setError("");
                 }}
-                className={level === l ? "auth-submit" : "btn btn-outline"}
-                style={{ justifyContent: "space-between" }}
+                className={`onb-choice${level === l ? " is-active" : ""}`}
               >
                 <strong>{l}</strong>
-                <span style={{ opacity: 0.8 }}>{LEVEL_DESC[l]}</span>
+                <span>{LEVEL_DESC[l]}</span>
               </button>
             ))}
           </div>
           {error && <p className="auth-error" role="alert">{error}</p>}
-          <button className="auth-submit" type="button" onClick={next} style={{ marginTop: "1rem" }}>
+          <button className="auth-submit onb-submit" type="button" onClick={next}>
             Tiếp tục
           </button>
         </div>

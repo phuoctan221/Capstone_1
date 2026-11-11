@@ -15,14 +15,17 @@ Adaptive English Vocabulary Learning Platform
 Agile Scrum - 8 Sprints
 
 Ứng dụng học từ vựng tiếng Anh thông minh — gợi ý từ vựng bằng AI (Google Gemini)
-và ôn tập theo hệ thống Leitner 5 hộp (spaced repetition).
+và ôn tập theo lịch FSRS (spaced repetition) dựa trên độ thành thạo từng từ.
 
 ## Tính năng
 
-- Đăng ký / đăng nhập bằng JWT
-- Quản lý từ vựng: thêm, sửa, xóa, tìm kiếm, lọc theo trình độ (A1–C2) và chủ đề
+- Đăng ký / đăng nhập bằng JWT; mật khẩu băm, email chuẩn hóa chữ thường
+- Phân quyền RBAC: `user` và `admin`; role do MongoDB quyết định. Frontend làm mới tài khoản qua `/auth/me` khi khởi động, backend luôn kiểm tra lại và trả `401`/`403`
+- Người học: onboarding trình độ/sở thích, dashboard, bài học 3 lĩnh vực (General English, IT & Technology, Business English)
+- Luyện tập 3 dạng câu hỏi (Meaning, Spelling, Context) và ôn tập flashcards theo FSRS
+- Theo dõi tiến độ: độ thành thạo từ, XP, streak, thống kê theo lĩnh vực/kỹ năng
 - Gợi ý từ vựng bằng AI: phiên âm, nghĩa tiếng Việt, ví dụ, đồng/nghĩa trái
-- Ôn tập flashcards theo Leitner 5 hộp với thống kê học tập
+- Trang quản trị `/admin`: dashboard số liệu thật, quản lý người dùng, từ vựng, lĩnh vực, bài học và ngân hàng câu hỏi
 
 ## Cấu trúc dự án
 
@@ -152,8 +155,48 @@ Chỉ chạy khi DB đang trống hoặc bạn muốn cập nhật bộ từ m�
 - [ ] Đăng ký / đăng nhập được
 - [ ] Thêm / sửa / xóa một từ vựng
 - [ ] (Nếu có key) thử gợi ý từ vựng AI
+- [ ] Tạo tài khoản admin (xem mục dưới) và mở được `/admin`
 
-### 8. Lỗi thường gặp
+### 8. Tài khoản admin
+
+Đăng ký công khai **luôn** tạo role `user`. Không có cơ chế tự động nâng quyền theo email.
+Tạo admin đầu tiên bằng script (chạy trong `backend/`, dùng đúng `MONGO_URI` trong `.env`):
+
+```bash
+# Tạo mới hoặc nâng quyền; mật khẩu nhập ẩn qua getpass
+.venv\Scripts\python.exe scripts\create_admin.py --email admin@example.com
+
+# Chỉ nâng quyền một tài khoản đã đăng ký
+.venv\Scripts\python.exe scripts\create_admin.py --email admin@example.com --promote-only
+
+# Đặt lại mật khẩu admin
+.venv\Scripts\python.exe scripts\create_admin.py --email admin@example.com --reset-password
+```
+
+Có thể truyền mật khẩu qua biến môi trường `SMARTVOCAB_ADMIN_PASSWORD` (không truyền qua tham số dòng lệnh).
+Với Docker, dùng `docker compose exec api1 python scripts/create_admin.py --email admin@example.com`.
+
+Sau khi đăng nhập bằng tài khoản admin, giao diện quản trị nằm tại `/admin`; người dùng thường chỉ thấy `/dashboard`.
+API `/admin/*` đều yêu cầu role `admin` và trả `403` cho tài khoản khác.
+
+Giao diện được tách theo vai trò:
+
+- **Người học** dùng `Navbar` và các trang `/dashboard`, `/learn`, `/progress`, `/flashcards`, `/vocabulary`, `/profile`.
+- **Admin** dùng `AdminLayout` tại `/admin` (tổng quan, người dùng, từ vựng, lĩnh vực, bài học, câu hỏi).
+- Admin mở đường dẫn người học sẽ được chuyển về `/admin`; người học mở `/admin` sẽ bị chuyển về `/dashboard`.
+- Khi token hết hạn hoặc không hợp lệ, frontend xóa phiên và đưa về `/login`; quyền thực tế luôn do backend kiểm tra.
+
+### 9. Kiểm thử backend
+
+```bash
+cd backend
+.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+Bộ test dùng MongoDB Atlas thật qua `backend/tests/support.py` (database `capstone1_mvp_test`),
+vì vậy cần `MONGO_URI` hợp lệ và mạng ổn định. Frontend hiện kiểm tra bằng `npm run build`.
+
+### 10. Lỗi thường gặp
 
 | Lỗi | Cách xử lý |
 |---|---|
@@ -165,12 +208,23 @@ Chỉ chạy khi DB đang trống hoặc bạn muốn cập nhật bộ từ m�
 | CORS error | Thêm origin frontend vào `CORS_ORIGINS` trong `backend/.env` |
 | Docker: `failed to connect to the docker API` | Mở Docker Desktop và chờ engine chạy |
 
-### 9. Quy ước Git
+### 11. Quy ước Git
 
 - `git pull --ff-only` trước khi bắt đầu làm.
 - Không commit: `backend/.env`, `.env.local`, `.venv/`, `node_modules/`, `dist/`, file dump/keyfile.
 - Không force-push; không push trực tiếp vào `main` hoặc `backup-tan-before-merge`.
 - Commit message ngắn, rõ: `feat: ...`, `fix: ...`, `docs: ...`.
+
+### 12. Giới hạn còn lại (MVP)
+
+- Role được cache trong `localStorage` để hiển thị UI; đây chỉ là gợi ý. Backend đọc role từ MongoDB ở mọi request nên sửa `localStorage` không cấp được quyền.
+- JWT đang lưu trong `localStorage`, chưa có refresh token/rotation. Phù hợp MVP; nếu triển khai công khai nên chuyển sang cookie `httpOnly` + `Secure`.
+- Chưa có rate limiting, audit log thao tác admin hoặc khóa tài khoản.
+- Ba lĩnh vực là cố định theo MVP; admin sửa được tên/mô tả/thứ tự/trạng thái nhưng không tạo hoặc xóa lĩnh vực.
+- Câu hỏi được sinh tự động từ từ vựng; admin sửa/xóa/tắt/tái tạo nhưng UI chưa có form tạo mới (backend đã có `POST /admin/exercises`).
+- Xóa bài học chỉ xóa metadata; phải xóa hoặc chuyển từ vựng trước, nếu không backend trả `409`.
+- Test backend cần MongoDB Atlas; khi không kết nối được, test được skip thay vì fail. Frontend chưa có unit test, hiện kiểm tra bằng `npm run build`.
+- Docker Phase A chưa có TLS và chạy `api1`/`api2` trên cùng một host; Phase B (replica set 3 node) chưa bật.
 
 ## MongoDB Atlas — database dùng chung
 
@@ -340,6 +394,7 @@ $env:WEB_PORT=9090; docker compose up -d
 - `web` healthy: `curl http://localhost:8080/healthz` → `ok`
 - API + MongoDB: `curl http://localhost:8080/api/health` → `"status":"ok"`
 - Trang đăng nhập render tại `/login`, gọi API qua `/api/...`
+- Tài khoản admin vào `/admin`; tài khoản `user` vào `/dashboard` và bị chặn khỏi `/admin`
 
 ### Xử lý sự cố
 

@@ -13,13 +13,9 @@ const LEVEL_DESC = {
   C2: "Thành thạo",
 };
 const INTERESTS = [
-  { value: "technology", label: "Công nghệ thông tin" },
-  { value: "business", label: "Kinh doanh" },
-  { value: "travel", label: "Du lịch" },
-  { value: "science", label: "Khoa học" },
-  { value: "academic", label: "Tiếng Anh học thuật" },
-  { value: "daily-life", label: "Giao tiếp hằng ngày" },
-  { value: "general", label: "Tổng quát" },
+  { value: "general", label: "General English" },
+  { value: "technology", label: "IT & Technology" },
+  { value: "business", label: "Business English" },
 ];
 const GOAL_PRESETS = [5, 10, 20, 30];
 

@@ -1,159 +1,147 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import AdminLayout from "./components/AdminLayout";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import DashboardPage from "./pages/DashboardPage";
+import ProgressPage from "./pages/ProgressPage";
 import LearnPage from "./pages/LearnPage";
 import LessonPage from "./pages/LessonPage";
+import PracticePage from "./pages/PracticePage";
 import QuizPage from "./pages/QuizPage";
 import FlashcardsPage from "./pages/FlashcardPage";
 import VocabularyPage from "./pages/VocabularyPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
+import AdminPage from "./pages/AdminPage";
+import AdminDomainsPage from "./pages/AdminDomainsPage";
+import AdminLessonsPage from "./pages/AdminLessonsPage";
+import AdminExercisesPage from "./pages/AdminExercisesPage";
 import OnboardingLevelPage from "./pages/OnboardingLevelPage";
 import OnboardingInterestsPage from "./pages/OnboardingInterestsPage";
 import OnboardingSettingsPage from "./pages/OnboardingSettingsPage";
 import ProfilePage from "./pages/ProfilePage";
-import { getToken, getUser } from "./services/authService";
+import { getToken, fetchMe, clearSession } from "./services/authService";
+import { isAdmin } from "./constants/domains";
+import { useAuth } from "./hooks/useAuth";
 
-const AUTH_ROUTES = ["/login", "/register"];
+function homeFor(user) {
+  if (!user) return "/login";
+  if (isAdmin(user)) return "/admin";
+  if (user.onboarded === false) return "/onboarding/level";
+  return "/dashboard";
+}
 
-function ProtectedRoute({ children }) {
-  if (!getToken()) return <Navigate to="/login" replace />;
-  const user = getUser();
-  if (user && user.onboarded === false) {
-    return <Navigate to="/onboarding/level" replace />;
-  }
+function BootScreen() {
+  return (
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+      <div className="sv-center-state" style={{ minWidth: 320 }} role="status">
+        <div className="sv-loader" />
+        <p>Đang xác minh phiên đăng nhập...</p>
+      </div>
+    </div>
+  );
+}
+
+function PublicOnly({ children }) {
+  const user = useAuth();
+  if (getToken() && user) return <Navigate to={homeFor(user)} replace />;
   return children;
+}
+
+function UserLayout() {
+  const user = useAuth();
+  if (!getToken() || !user) return <Navigate to="/login" replace />;
+  if (isAdmin(user)) return <Navigate to="/admin" replace />;
+  if (user.onboarded === false) return <Navigate to="/onboarding/level" replace />;
+  return (
+    <>
+      <Navbar />
+      <main className="container sv-app-main">
+        <Outlet />
+      </main>
+    </>
+  );
+}
+
+function AdminGuard() {
+  const user = useAuth();
+  if (!getToken() || !user) return <Navigate to="/login" replace />;
+  if (!isAdmin(user)) return <Navigate to="/dashboard" replace />;
+  return <AdminLayout />;
 }
 
 function OnboardingRoute({ children }) {
-  if (!getToken()) return <Navigate to="/login" replace />;
-  const user = getUser();
-  if (user && user.onboarded === true) {
-    return <Navigate to="/learn" replace />;
-  }
+  const user = useAuth();
+  if (!getToken() || !user) return <Navigate to="/login" replace />;
+  if (isAdmin(user)) return <Navigate to="/admin" replace />;
+  if (user.onboarded === true) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
+function RootRedirect() {
+  const user = useAuth();
+  if (!getToken() || !user) return <Navigate to="/login" replace />;
+  return <Navigate to={homeFor(user)} replace />;
+}
+
 export default function App() {
-  const location = useLocation();
-  const isAuthenticated = Boolean(getToken());
-  const user = getUser();
-  const needsOnboarding = isAuthenticated && user && user.onboarded === false;
-  const isAuthPage = AUTH_ROUTES.includes(location.pathname);
-  const isOnboardingPage = location.pathname.startsWith("/onboarding");
-  const showNavbar = isAuthenticated && !isAuthPage && !isOnboardingPage;
+  const [booting, setBooting] = useState(() => Boolean(getToken()));
+
+  useEffect(() => {
+    if (!getToken()) {
+      setBooting(false);
+      return undefined;
+    }
+    let active = true;
+    fetchMe()
+      .catch(() => clearSession())
+      .finally(() => {
+        if (active) setBooting(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (booting) return <BootScreen />;
 
   return (
-    <div className="app">
-      {showNavbar && <Navbar />}
-      <main className={showNavbar ? "container" : ""}>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Navigate
-                to={
-                  !isAuthenticated
-                    ? "/login"
-                    : needsOnboarding
-                      ? "/onboarding/level"
-                      : "/learn"
-                }
-                replace
-              />
-            }
-          />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/onboarding/level"
-            element={
-              <OnboardingRoute>
-                <OnboardingLevelPage />
-              </OnboardingRoute>
-            }
-          />
-          <Route
-            path="/onboarding/interests"
-            element={
-              <OnboardingRoute>
-                <OnboardingInterestsPage />
-              </OnboardingRoute>
-            }
-          />
-          <Route path="/settings/onboarding" element={<Navigate to="/settings/learning" replace />} />
-          <Route
-            path="/settings/learning"
-            element={
-              <ProtectedRoute>
-                <OnboardingSettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/learn"
-            element={
-              <ProtectedRoute>
-                <LearnPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/lessons/:lessonId"
-            element={
-              <ProtectedRoute>
-                <LessonPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/lessons/:lessonId/quiz"
-            element={
-              <ProtectedRoute>
-                <QuizPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/flashcards"
-            element={
-              <ProtectedRoute>
-                <FlashcardsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/vocabulary"
-            element={
-              <ProtectedRoute>
-                <VocabularyPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="*"
-            element={
-              <Navigate
-                to={
-                  !isAuthenticated
-                    ? "/login"
-                    : needsOnboarding
-                      ? "/onboarding/level"
-                      : "/learn"
-                }
-                replace
-              />
-            }
-          />
-        </Routes>
-      </main>
-    </div>
+    <Routes>
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
+      <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
+
+      <Route path="/onboarding/level" element={<OnboardingRoute><OnboardingLevelPage /></OnboardingRoute>} />
+      <Route path="/onboarding/interests" element={<OnboardingRoute><OnboardingInterestsPage /></OnboardingRoute>} />
+
+      <Route element={<UserLayout />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/learn" element={<LearnPage />} />
+        <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/lessons/:lessonId" element={<LessonPage />} />
+        <Route path="/lessons/:lessonId/practice/:skill" element={<PracticePage />} />
+        <Route path="/lessons/:lessonId/quiz" element={<QuizPage />} />
+        <Route path="/flashcards" element={<FlashcardsPage />} />
+        <Route path="/vocabulary" element={<VocabularyPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings/learning" element={<OnboardingSettingsPage />} />
+      </Route>
+
+      <Route path="/admin" element={<AdminGuard />}>
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="users/:id" element={<AdminUserDetailPage />} />
+        <Route path="vocabulary" element={<AdminPage />} />
+        <Route path="domains" element={<AdminDomainsPage />} />
+        <Route path="lessons" element={<AdminLessonsPage />} />
+        <Route path="exercises" element={<AdminExercisesPage />} />
+      </Route>
+
+      <Route path="/settings/onboarding" element={<Navigate to="/settings/learning" replace />} />
+      <Route path="*" element={<RootRedirect />} />
+    </Routes>
   );
 }
