@@ -1,0 +1,29 @@
+.speaking-page { max-width: 900px; margin: 32px auto 110px; }
+.speaking-card { background: white; border: 1px solid #dce4ee; border-radius: 18px; padding: 28px; margin-top: 24px; box-shadow: 0 8px 30px #182b4b08; }
+.speaking-card h2, .speaking-card h3 { margin: 16px 0; }
+.speaking-card p { margin: 12px 0; }
+.speaking-card textarea, .speaking-card select { display: block; width: 100%; padding: 12px; margin: 10px 0 18px; border: 1px solid #bcc9d9; border-radius: 8px; font: inherit; }
+.speaking-card fieldset { padding: 16px; margin: 20px 0; border: 1px solid #dce4ee; border-radius: 10px; }
+.speaking-words { display: grid; gap: 12px; max-height: 260px; overflow: auto; }
+.speaking-words input { margin-right: 10px; }
+.speaking-target { font-size: clamp(28px, 6vw, 48px); color: #2658a8; overflow-wrap: anywhere; }
+.speaking-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0; }
+.speaking-error { color: #a52222; background: #fff1f1; padding: 14px; border-radius: 8px; }
+.pronunciation-preview { background: #f2f6fc; border: 1px solid #dce4ee; border-radius: 12px; padding: 16px; margin: 20px 0; }
+.pronunciation-preview .speaking-actions { margin: 12px 0; }
+.pronunciation-volume { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.pronunciation-volume input[type="range"] { flex: 1 1 120px; max-width: 240px; min-width: 100px; accent-color: #2658a8; cursor: pointer; }
+.pronunciation-volume output { min-width: 45px; font-variant-numeric: tabular-nums; }
+.speaking-feedback { margin-top: 20px; }
+.speaking-feedback h4 { font-size: 18px; margin-bottom: 12px; }
+.speaking-feedback ol { padding-left: 24px; line-height: 1.8; }
+.speaking-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.speaking-metrics > div, .speaking-word-feedback { border: 1px solid #dce4ee; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.speaking-word-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.speaking-word-heading > strong { font-size: 20px; }
+.speaking-phones { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.speaking-phones li { padding: 8px 12px; border-radius: 8px; }
+.speaking-phones .needs-practice { color: #854000; background: #fff3dc; }
+.speaking-phones .good { color: #17623c; background: #eaf7ef; }
+.speaking-phones .unrated { color: #526176; background: #f2f6fc; }
+.speaking-feedback-note { color: #526176; font-size: 13px; }

@@ -38,6 +38,8 @@ async def ensure_indexes() -> None:
     if db is None:
         raise RuntimeError("Database is not initialized")
 
+    await db.ai_rate_limits.create_index("expires_at", expireAfterSeconds=3600)
+
     # --- users ---------------------------------------------------------
     await db.users.create_index([("email", 1)], unique=True, sparse=True)
     await db.users.create_index([("role", 1)])
