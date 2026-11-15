@@ -5,23 +5,26 @@ export async function fetchLessons() {
   return data;
 }
 
-export async function fetchLesson(lessonId) {
-  const { data } = await api.get(`/lessons/${lessonId}`);
+export async function fetchLesson(lessonId, unit) {
+  const { data } = await api.get(`/lessons/${lessonId}`, {
+    params: unit ? { unit } : {},
+  });
   return data;
 }
 
-export async function fetchQuiz(lessonId, count = 10) {
+export async function fetchQuiz(lessonId, count = 10, unit) {
   const { data } = await api.get(`/lessons/${lessonId}/quiz`, {
-    params: { count },
+    params: { count, ...(unit ? { unit } : {}) },
   });
   return data;
 }
 
-export async function submitQuiz(lessonId, results) {
-  const { data } = await api.post(`/lessons/${lessonId}/quiz/submit`, {
-    lesson_id: lessonId,
-    results,
-  });
+export async function submitQuiz(lessonId, results, unit) {
+  const { data } = await api.post(
+    `/lessons/${lessonId}/quiz/submit`,
+    { lesson_id: lessonId, results },
+    { params: unit ? { unit } : {} }
+  );
   return data;
 }
 

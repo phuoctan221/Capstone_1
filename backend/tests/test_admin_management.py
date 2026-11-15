@@ -174,6 +174,147 @@ class AdminManagementTests(ApiTestCase):
             )
             self.assertEqual(response.status_code, 403, path)
 
+    async def test_update_user_email_rename_migrates_data(self):
+        admin_email = "admin@example.com"
+        headers = await self.make_admin(admin_email)
+        old_email = "old-address@example.com"
+        await self.register(old_email)
+        db = mongodb.get_database()
+        await db.flashcard_progress.insert_one(
+            {"user_id": old_email, "vocabulary_id": "sample"}
+        )
+
+        updated = await self.client.put(
+            f"/admin/users/{old_email}",
+            json={
+                "email": "new-address@example.com",
+                "username": "renamed",
+                "interests": ["general"],
+                "daily_goal": 20,
+            },
+            headers=headers,
+        )
+        self.assertEqual(updated.status_code, 200, updated.text)
+        self.assertEqual(updated.json()["email"], "new-address@example.com")
+        self.assertEqual(updated.json()["username"], "renamed")
+
+        self.assertIsNone(await db.users.find_one({"_id": old_email}))
+        self.assertIsNotNone(
+            await db.users.find_one({"_id": "new-address@example.com"})
+        )
+        migrated = await db.flashcard_progress.find_one(
+            {"user_id": "new-address@example.com"}
+        )
+        self.assertIsNotNone(migrated, "flashcard_progress must follow the account")
+
+        blocked = await self.client.put(
+            f"/admin/users/{admin_email}",
+            json={"email": "another-self@example.com"},
+            headers=headers,
+        )
+        self.assertEqual(blocked.status_code, 400)
+
+    async def test_delete_user_cascades_all_learning_data(self):
+        admin_email = "admin@example.com"
+        headers = await self.make_admin(admin_email)
+        victim = "to-delete@example.com"
+        await self.register(victim)
+        db = mongodb.get_database()
+        collections = (
+            "user_word_states",
+            "answer_attempts",
+            "learning_sessions",
+            "fsrs_review_logs",
+            "lesson_progress",
+            "quiz_questions",
+            "flashcard_progress",
+        )
+        for collection in collections:
+            await db[collection].insert_one({"user_id": victim})
+
+        response = await self.client.delete(f"/admin/users/{victim}", headers=headers)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertIsNone(await db.users.find_one({"_id": victim}))
+        for collection in collections:
+            remaining = await db[collection].count_documents({"user_id": victim})
+            self.assertEqual(remaining, 0, collection)
+
+        self_delete = await self.client.delete(
+            f"/admin/users/{admin_email}", headers=headers
+        )
+        self.assertEqual(self_delete.status_code, 400)
+
+    async def test_reset_password_invalidates_old_sessions(self):
+        admin_email = "admin@example.com"
+        headers = await self.make_admin(admin_email)
+        victim = "victim@example.com"
+        payload = await self.register(victim, password="oldpass123")
+        old_headers = {"Authorization": f"Bearer {payload['access_token']}"}
+        self.assertEqual(
+            (await self.client.get("/auth/me", headers=old_headers)).status_code, 200
+        )
+
+        reset = await self.client.post(
+            f"/admin/users/{victim}/reset-password", headers=headers
+        )
+        self.assertEqual(reset.status_code, 200, reset.text)
+        new_password = reset.json()["password"]
+        self.assertEqual(len(new_password), 10)
+
+        stale = await self.client.get("/auth/me", headers=old_headers)
+        self.assertEqual(stale.status_code, 401)
+
+        old_login = await self.client.post(
+            "/auth/login", json={"email": victim, "password": "oldpass123"}
+        )
+        self.assertEqual(old_login.status_code, 401)
+        new_login = await self.client.post(
+            "/auth/login", json={"email": victim, "password": new_password}
+        )
+        self.assertEqual(new_login.status_code, 200, new_login.text)
+
+    async def test_lock_unlock_blocks_login_and_sessions(self):
+        admin_email = "admin@example.com"
+        headers = await self.make_admin(admin_email)
+        other = "lockme@example.com"
+        payload = await self.register(other, password="secret123")
+        other_headers = {"Authorization": f"Bearer {payload['access_token']}"}
+
+        locked = await self.client.put(
+            f"/admin/users/{other}/status",
+            json={"is_active": False},
+            headers=headers,
+        )
+        self.assertEqual(locked.status_code, 200, locked.text)
+        self.assertFalse(locked.json()["is_active"])
+
+        # Existing token is invalidated by the version bump, and login is refused.
+        self.assertEqual(
+            (await self.client.get("/auth/me", headers=other_headers)).status_code, 401
+        )
+        blocked_login = await self.client.post(
+            "/auth/login", json={"email": other, "password": "secret123"}
+        )
+        self.assertEqual(blocked_login.status_code, 403)
+
+        self_lock = await self.client.put(
+            f"/admin/users/{admin_email}/status",
+            json={"is_active": False},
+            headers=headers,
+        )
+        self.assertEqual(self_lock.status_code, 400)
+
+        unlocked = await self.client.put(
+            f"/admin/users/{other}/status",
+            json={"is_active": True},
+            headers=headers,
+        )
+        self.assertEqual(unlocked.status_code, 200, unlocked.text)
+        allowed_login = await self.client.post(
+            "/auth/login", json={"email": other, "password": "secret123"}
+        )
+        self.assertEqual(allowed_login.status_code, 200, allowed_login.text)
+
     async def test_tokens_and_db_role_are_validated(self):
         self.assertEqual((await self.client.get("/admin/stats")).status_code, 401)
         self.assertEqual(

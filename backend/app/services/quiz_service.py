@@ -6,9 +6,11 @@ from app.db.mongodb import get_database
 from app.services.lesson_service import get_lesson
 
 
-async def build_quiz(lesson_id: str, user_id: str, count: int = 10) -> list[dict]:
+async def build_quiz(
+    lesson_id: str, user_id: str, count: int = 10, unit: int | None = None
+) -> list[dict]:
     db = get_database()
-    lesson = await get_lesson(lesson_id, user_id)
+    lesson = await get_lesson(lesson_id, user_id, unit)
     if not lesson:
         return []
 

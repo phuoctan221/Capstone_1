@@ -15,6 +15,8 @@ class AdminUserUpdate(BaseModel):
     learning_level: str | None = Field(None, pattern="^(A1|A2|B1|B2|C1|C2)$")
     interests: list[str] | None = None
     daily_goal: int | None = Field(None, ge=5, le=100)
+    daily_new_limit: int | None = Field(None, ge=1, le=100)
+    daily_review_limit: int | None = Field(None, ge=1, le=200)
 
 
 class AdminUserStatus(BaseModel):

@@ -24,6 +24,18 @@ from app.services.mastery_service import DEFAULT_MASTERY
 COLLECTION = "user_word_states"
 VALID_TOPICS = ("general", "technology", "business")
 
+# A word only counts as studied once the learner has answered an exercise
+# (Mastery > 0) or explicitly reviewed the card (review_count > 0). States
+# created when a practice session starts must not enter the FSRS due queue.
+STUDIED_FILTER = {
+    "$or": [
+        {"review_count": {"$gt": 0}},
+        {"mastery.meaning": {"$gt": 0}},
+        {"mastery.spelling": {"$gt": 0}},
+        {"mastery.context": {"$gt": 0}},
+    ]
+}
+
 
 def _new_state(user_id: str, vocabulary_id: str, now: datetime) -> dict:
     return {
@@ -160,7 +172,13 @@ async def get_due_cards(user_id: str, limit: int = 100) -> list[dict]:
     now = datetime.now(timezone.utc)
     cursor = (
         db[COLLECTION]
-        .find({"user_id": user_id, "fsrs.due_at": {"$lte": now}})
+        .find(
+            {
+                "user_id": user_id,
+                "fsrs.due_at": {"$lte": now},
+                **STUDIED_FILTER,
+            }
+        )
         .sort("fsrs.due_at", 1)
         .limit(limit)
     )
@@ -199,7 +217,9 @@ async def get_due_cards(user_id: str, limit: int = 100) -> list[dict]:
 async def get_stats(user_id: str) -> dict:
     db = get_database()
     now = datetime.now(timezone.utc)
-    total = await db[COLLECTION].count_documents({"user_id": user_id})
+    total = await db[COLLECTION].count_documents(
+        {"user_id": user_id, **STUDIED_FILTER}
+    )
     mastered = await db[COLLECTION].count_documents(
         {
             "user_id": user_id,
@@ -209,7 +229,11 @@ async def get_stats(user_id: str) -> dict:
         }
     )
     due = await db[COLLECTION].count_documents(
-        {"user_id": user_id, "fsrs.due_at": {"$lte": now}}
+        {
+            "user_id": user_id,
+            "fsrs.due_at": {"$lte": now},
+            **STUDIED_FILTER,
+        }
     )
     return {
         "total_words": total,

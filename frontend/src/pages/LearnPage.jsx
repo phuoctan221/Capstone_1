@@ -53,11 +53,29 @@ export default function LearnPage() {
           {group.length === 0 ? <div className="sv-inline-empty">Chưa có bài học cho lĩnh vực này. Hãy kiểm tra dữ liệu Vocabulary và cấp độ.</div> :
             <div className="sv-lessons-grid">{group.map((lesson, index) => {
               const locked = lesson.unlocked === false || !lesson.word_count;
-              const contents = <><div className="sv-lesson-top"><span className="sv-level-tag">{lesson.level}</span><span className={`sv-status-tag${lesson.completed ? " success" : ""}`}>{lesson.completed ? "Đã hoàn thành" : locked ? "Chưa khả dụng" : "Có thể học"}</span></div>
-                <div className="sv-lesson-num">BÀI {String(index + 1).padStart(2,"0")}</div><h3>{lesson.title}</h3><p>{lesson.description || `${lesson.word_count} từ vựng cấp độ ${lesson.level}`}</p>
+              const requirement = lesson.unlock_requirement;
+              const unitCount = lesson.unit_count || 0;
+              const nextUnit = lesson.next_unit || 1;
+              const nextWords = lesson.next_unit_word_count || 0;
+              const slug = lesson.slug || lesson.id;
+              return <div key={slug} className={`sv-lesson-card${locked ? " is-disabled" : ""}`} aria-disabled={locked}>
+                <div className="sv-lesson-top"><span className="sv-level-tag">{lesson.level}</span><span className={`sv-status-tag${lesson.completed ? " success" : ""}`}>{lesson.completed ? "Đã hoàn thành" : locked ? "Đã khóa" : "Có thể học"}</span></div>
+                <div className="sv-lesson-num">BÀI {String(index + 1).padStart(2,"0")} · {unitCount} UNIT</div><h3>{lesson.title}</h3><p>{lesson.description || `${lesson.word_count} từ vựng cấp độ ${lesson.level}`}</p>
                 <div className="sv-lesson-meter"><div style={{ width: `${clampPercent(lesson.progress_percent)}%` }}/></div>
-                <div className="sv-lesson-bottom"><span>{lesson.learned_count ?? 0}/{lesson.word_count} từ đã học</span><strong>{locked ? "—" : "→"}</strong></div></>;
-              return locked ? <div key={lesson.id || lesson.slug} className="sv-lesson-card is-disabled" aria-disabled="true">{contents}</div> : <Link key={lesson.id || lesson.slug} className="sv-lesson-card" to={`/lessons/${lesson.slug || lesson.id}`}>{contents}</Link>;
+                <div className="sv-lesson-bottom"><span>{lesson.learned_count ?? 0}/{lesson.word_count} từ đã học</span><strong>{locked ? "—" : "→"}</strong></div>
+                <div className="sv-unit-strip">
+                  {locked ? <span className="sv-unit-next">{requirement ? `Hoàn thành ${requirement.level} để mở khóa` : "Chưa khả dụng"}</span> : <><span className="sv-unit-next">Bài {nextUnit}/{unitCount || 1} · {nextWords} từ</span><Link className="sv-unit-continue" to={`/lessons/${slug}?unit=${nextUnit}`}>Học tiếp →</Link></>}
+                </div>
+                {!locked && unitCount > 1 && <div className="sv-unit-list" aria-label="Danh sách unit">
+                  {lesson.units.map((unit) => {
+                    const unitLocked = unit.unlocked === false;
+                    const label = `Bài ${unit.index} · ${unit.word_count} từ`;
+                    return unitLocked
+                      ? <span key={unit.index} className="sv-unit-pill is-locked" title={label}>{unit.index}</span>
+                      : <Link key={unit.index} className={`sv-unit-pill${unit.completed ? " is-done" : ""}${unit.index === nextUnit ? " is-next" : ""}`} to={`/lessons/${slug}?unit=${unit.index}`} title={label}>{unit.index}</Link>;
+                  })}
+                </div>}
+              </div>;
             })}</div>}
         </section>;
       })}

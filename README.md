@@ -22,7 +22,7 @@ và ôn tập theo lịch FSRS (spaced repetition) dựa trên độ thành th�
 - Đăng ký / đăng nhập bằng JWT; mật khẩu băm, email chuẩn hóa chữ thường
 - Phân quyền RBAC: `user` và `admin`; role do MongoDB quyết định. Frontend làm mới tài khoản qua `/auth/me` khi khởi động, backend luôn kiểm tra lại và trả `401`/`403`
 - Người học: onboarding trình độ/sở thích, dashboard, bài học 3 lĩnh vực (General English, IT & Technology, Business English)
-- Luyện tập 3 dạng câu hỏi (Meaning, Spelling, Context) và ôn tập flashcards theo FSRS
+- Luyện tập 3 dạng câu hỏi (Meaning, Spelling, Context) và ôn tập flashcards theo FSRS với 3 chế độ Lật thẻ / Recall / Cloze
 - Theo dõi tiến độ: độ thành thạo từ, XP, streak, thống kê theo lĩnh vực/kỹ năng
 - Gợi ý từ vựng bằng AI: phiên âm, nghĩa tiếng Việt, ví dụ, đồng/nghĩa trái
 - Trang quản trị `/admin`: dashboard số liệu thật, quản lý người dùng, từ vựng, lĩnh vực, bài học và ngân hàng câu hỏi
@@ -33,7 +33,7 @@ và ôn tập theo lịch FSRS (spaced repetition) dựa trên độ thành th�
 SmartVOCAB/
 ├── frontend/     # React 18 + Vite (src/components, pages, services)
 ├── backend/      # FastAPI + MongoDB (app/core, db, models, routers, services, scripts)
-├── docs/         # requirements.md, architecture.md, erd.md, api-spec.md
+├── docs/         # requirements.md, architecture.md, erd.md, api-spec.md, deployment.md
 └── data/         # sample_vocabulary.json
 ```
 
@@ -138,15 +138,30 @@ docker compose ps
 
 Mở http://localhost:8080. Chi tiết và xử lý sự cố: xem mục **Chạy bằng Docker** bên dưới.
 
-### 6. Nạp dữ liệu mẫu (tùy chọn)
+### 6. Nạp dữ liệu từ vựng (tùy chọn)
+
+DB dùng chung đã có sẵn kho từ. Chỉ chạy khi cần dựng lại dữ liệu hoặc thêm từ mới.
 
 ```bash
 cd backend
-.venv\Scripts\python.exe scripts\import_sample_vocabulary.py --dry-run
-.venv\Scripts\python.exe scripts\import_sample_vocabulary.py
+
+# 1) CSV -> MongoDB (resumable, tự tạo unique word_key)
+.venv\Scripts\python.exe scripts\import_english_vocab_pipeline.py --limit 10   # thử 10 từ
+.venv\Scripts\python.exe scripts\import_english_vocab_pipeline.py             # toàn bộ CSV
+
+# 2) Làm giàu: IPA, synonyms/antonyms, topic/domain, review_status
+.venv\Scripts\python.exe scripts\enrich_vocabularies.py --dry-run --sample 50
+.venv\Scripts\python.exe scripts\enrich_vocabularies.py --apply --fields all --rpm 60
+.venv\Scripts\python.exe scripts\enrich_vocabularies.py --apply --fields phonetic --words apple,book
+
+# 3) Seed domains + lessons + ngân hàng câu hỏi
+.venv\Scripts\python.exe scripts\seed_mvp.py --apply --allow-shared
 ```
 
-Chỉ chạy khi DB đang trống hoặc bạn muốn cập nhật bộ từ mẫu.
+- `enrich_vocabularies.py` chỉ điền trường đang trống, không ghi đè `meaning`/`example`; tự backup vào `backend/data/enrichment_backup_*.json` trước khi ghi.
+- IPA lấy từ dictionaryapi.dev (mặc định 60 rpm); topic phân loại bằng Gemini theo 3 lĩnh vực MVP, fallback keyword. Tiến độ lưu ở `vocab_enrichment_jobs` nên có thể dừng và chạy lại.
+- `seed_mvp.py` chỉ tạo từ còn thiếu, giữ nguyên dữ liệu đã làm giàu. Dùng `--skip-vocabulary` khi chỉ muốn dựng lại lessons/exercise bank sau khi đổi `domain`.
+- Bộ mẫu nhỏ: `scripts\import_sample_vocabulary.py` (xem mục **Dữ liệu mẫu**).
 
 ### 7. Checklist sau khi chạy
 
@@ -417,3 +432,4 @@ Chi tiết rollback, bảo toàn dữ liệu và lộ trình Replica Set: [docs/
 - [Kiến trúc](docs/architecture.md)
 - [ERD](docs/erd.md)
 - [API Specification](docs/api-spec.md)
+- [Triển khai Docker](docs/deployment.md)

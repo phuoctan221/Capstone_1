@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { fetchLesson } from "../services/lessonService";
 import { SKILLS, formatPercent, domainOf, formatApiError } from "../constants/domains";
 import { EmptyState, PageError, PageLoading, SectionHeading } from "../components/PageState";
 
 export default function LessonPage() {
   const { lessonId } = useParams();
+  const [params] = useSearchParams();
+  const unitParam = params.get("unit");
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -14,11 +16,11 @@ export default function LessonPage() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    fetchLesson(lessonId).then((data) => { if (active) { setLesson(data); setError(""); } })
+    fetchLesson(lessonId, unitParam || undefined).then((data) => { if (active) { setLesson(data); setError(""); } })
       .catch((err) => { if (active) setError(formatApiError(err, "Không tìm thấy bài học.")); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [lessonId, refresh]);
+  }, [lessonId, unitParam, refresh]);
 
   if (loading) return <PageLoading label="Đang chuẩn bị bài học..."/>;
   if (error) return <PageError message={error} onRetry={() => setRefresh((value) => value + 1)}/>;
@@ -29,17 +31,28 @@ export default function LessonPage() {
   const learned = Number(lesson.learned_count ?? 0);
   const percent = total ? formatPercent((learned / total) * 100) : 0;
   const domain = domainOf(lesson.topic);
+  const currentUnit = lesson.unit || 1;
+  const unitCount = lesson.unit_count || 1;
+  const unitQuery = `?unit=${currentUnit}`;
+  const prevUnit = currentUnit > 1 ? currentUnit - 1 : null;
+  const nextUnit = currentUnit < unitCount ? currentUnit + 1 : null;
 
   return <div className="sv-page">
-    <div className="sv-breadcrumb"><Link to="/learn">Lộ trình</Link><span>/</span><span>{domain?.label || lesson.topic}</span><span>/</span><b>{lesson.level}</b></div>
-    <div className="sv-lesson-hero"><div className="sv-lesson-hero-main"><span className="sv-eyebrow">BÀI HỌC · {lesson.level}</span><h1>{lesson.title}</h1><p>Học từ mới qua ba kỹ năng độc lập: nghĩa, chính tả và ngữ cảnh.</p><div className="sv-lesson-meta"><span>{total} từ vựng</span><span>{learned} từ đã học</span><span>{percent}% tiến độ</span></div></div><div className="sv-lesson-hero-progress"><strong>{percent}%</strong><span>Tiến độ bài học</span><div className="sv-lesson-meter"><div style={{width:`${percent}%`}}/></div></div></div>
+    <div className="sv-breadcrumb"><Link to="/learn">Lộ trình</Link><span>/</span><span>{domain?.label || lesson.topic}</span><span>/</span><b>{lesson.level} · Unit {currentUnit}</b></div>
+    <div className="sv-lesson-hero"><div className="sv-lesson-hero-main"><span className="sv-eyebrow">BÀI HỌC · {lesson.level} · UNIT {currentUnit}/{unitCount}</span><h1>{lesson.title}</h1><p>Học từ mới qua ba kỹ năng độc lập: nghĩa, chính tả và ngữ cảnh.</p><div className="sv-lesson-meta"><span>Bài {currentUnit}/{unitCount}</span><span>{total} từ trong unit</span><span>{learned} từ đã học</span><span>{percent}% tiến độ</span></div></div><div className="sv-lesson-hero-progress"><strong>{percent}%</strong><span>Tiến độ unit</span><div className="sv-lesson-meter"><div style={{width:`${percent}%`}}/></div></div></div>
+
+    <div className="sv-unit-nav">
+      {prevUnit ? <Link className="sv-btn sv-btn-outline" to={`/lessons/${lessonId}?unit=${prevUnit}`}>← Bài trước</Link> : <span className="sv-btn sv-btn-outline sv-link-disabled" aria-disabled="true">← Bài trước</span>}
+      <span className="sv-muted-small">Unit {currentUnit} / {unitCount}</span>
+      {nextUnit ? <Link className="sv-btn sv-btn-outline" to={`/lessons/${lessonId}?unit=${nextUnit}`}>Bài tiếp →</Link> : <span className="sv-btn sv-btn-outline sv-link-disabled" aria-disabled="true">Bài tiếp →</span>}
+    </div>
 
     <SectionHeading eyebrow="RÈN LUYỆN MỖI KỸ NĂNG" title="Chọn một cách luyện tập" description="Kết quả được chấm tại backend và cập nhật Mastery riêng cho từng kỹ năng."/>
-    <div className="sv-skill-grid">{SKILLS.map((skill) => <Link key={skill.id} to={`/lessons/${lessonId}/practice/${skill.id}`} className={`sv-skill-card sv-tone-${skill.tone}`}><span className="sv-skill-glyph">{skill.glyph}</span><span className="sv-skill-index">0{SKILLS.indexOf(skill)+1} / 03</span><h3>{skill.label}</h3><p>{skill.subtitle}</p><span className="sv-skill-action">Bắt đầu luyện →</span></Link>)}</div>
+    <div className="sv-skill-grid">{SKILLS.map((skill) => <Link key={skill.id} to={`/lessons/${lessonId}/practice/${skill.id}${unitQuery}`} className={`sv-skill-card sv-tone-${skill.tone}`}><span className="sv-skill-glyph">{skill.glyph}</span><span className="sv-skill-index">0{SKILLS.indexOf(skill)+1} / 03</span><h3>{skill.label}</h3><p>{skill.subtitle}</p><span className="sv-skill-action">Bắt đầu luyện →</span></Link>)}</div>
 
     <div className="sv-two-col sv-lesson-bottom-grid">
-      <section className="sv-panel"><SectionHeading title="Kiểm tra cuối bài" description="Trắc nghiệm tổng hợp, tính điểm và XP qua backend."/><p className="sv-panel-help">{words.length < 2 ? "Cần thêm từ vựng để mở bài kiểm tra." : `Gồm tối đa ${Math.min(10, words.length)} câu hỏi theo nội dung bài học.`}</p><Link to={`/lessons/${lessonId}/quiz`} className={`sv-btn sv-btn-primary${words.length < 2 ? " sv-link-disabled" : ""}`} aria-disabled={words.length < 2} onClick={words.length < 2 ? (e) => e.preventDefault() : undefined}>Làm bài kiểm tra →</Link></section>
-      <section className="sv-panel"><SectionHeading title="Thông tin bài học"/><div className="sv-detail-row"><span>Lĩnh vực</span><b>{domain?.label || lesson.topic}</b></div><div className="sv-detail-row"><span>Trình độ</span><b>{lesson.level}</b></div><div className="sv-detail-row"><span>Số từ</span><b>{total}</b></div><div className="sv-detail-row"><span>Tiến độ</span><b>{percent}%</b></div></section>
+      <section className="sv-panel"><SectionHeading title="Kiểm tra cuối bài" description="Trắc nghiệm tổng hợp, tính điểm và XP qua backend."/><p className="sv-panel-help">{words.length < 2 ? "Cần thêm từ vựng để mở bài kiểm tra." : `Gồm tối đa ${Math.min(10, words.length)} câu hỏi theo nội dung unit này.`}</p><Link to={`/lessons/${lessonId}/quiz${unitQuery}`} className={`sv-btn sv-btn-primary${words.length < 2 ? " sv-link-disabled" : ""}`} aria-disabled={words.length < 2} onClick={words.length < 2 ? (e) => e.preventDefault() : undefined}>Làm bài kiểm tra →</Link></section>
+      <section className="sv-panel"><SectionHeading title="Thông tin bài học"/><div className="sv-detail-row"><span>Lĩnh vực</span><b>{domain?.label || lesson.topic}</b></div><div className="sv-detail-row"><span>Trình độ</span><b>{lesson.level}</b></div><div className="sv-detail-row"><span>Unit</span><b>{currentUnit}/{unitCount}</b></div><div className="sv-detail-row"><span>Số từ trong unit</span><b>{total}</b></div><div className="sv-detail-row"><span>Tiến độ unit</span><b>{percent}%</b></div></section>
     </div>
 
     <SectionHeading eyebrow="TÀI LIỆU HỌC" title="Từ vựng trong bài" description="Danh sách từ và ví dụ để bạn xem trước khi luyện."/>

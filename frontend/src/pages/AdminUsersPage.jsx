@@ -102,10 +102,6 @@ export default function AdminUsersPage() {
     return () => clearTimeout(timer);
   }, [load]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, role]);
-
   async function runAction() {
     const current = confirm;
     if (!current) return;
@@ -129,7 +125,11 @@ export default function AdminUsersPage() {
       } else if (kind === "delete") {
         await deleteAdminUser(user.id);
         setNotice(CONFIRM_TEXT[kind].notice(user));
-        await load();
+        if (items.length === 1 && page > 1) {
+          setPage(page - 1);
+        } else {
+          await load();
+        }
       } else if (kind === "reset") {
         const result = await resetAdminUserPassword(user.id);
         setResetResult(result);
@@ -189,8 +189,8 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="sv-admin-toolbar">
-        <input className="sv-answer-field sv-admin-grow" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo email hoặc tên đăng nhập..." aria-label="Tìm tài khoản" />
-        <select className="sv-answer-field" value={role} onChange={(event) => setRole(event.target.value)} aria-label="Lọc theo vai trò">
+        <input className="sv-answer-field sv-admin-grow" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Tìm theo email hoặc tên đăng nhập..." aria-label="Tìm tài khoản" />
+        <select className="sv-answer-field" value={role} onChange={(event) => { setRole(event.target.value); setPage(1); }} aria-label="Lọc theo vai trò">
           <option value="">Tất cả vai trò</option>
           <option value="admin">Admin</option>
           <option value="user">Người học</option>
@@ -275,6 +275,7 @@ export default function AdminUsersPage() {
       {editing && (
         <AdminUserEditModal
           user={editing}
+          isSelf={editing.id === me?.id}
           busy={editBusy}
           error={editError}
           onSave={saveEdit}

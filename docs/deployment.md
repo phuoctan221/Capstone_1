@@ -28,6 +28,7 @@ Browser
 - Cả `api1`, `api2` đọc cùng `backend/.env`; **không có secret nào nằm trong image**.
 - Nginx strip tiền tố `/api` (`/api/vocabulary` → `/vocabulary`), khớp Vite proxy khi dev.
 - Phase A **không di chuyển dữ liệu**: vẫn dùng Atlas, không ghi/xóa dữ liệu Atlas ngoài việc backend tạo index idempotent lúc khởi động.
+- AI gọi **Google Gemini** trực tiếp từ backend (dependency ngoài, cần egress internet).
 
 ## 2. Chạy Phase A
 
@@ -74,9 +75,15 @@ Compose đọc `backend/.env` qua `env_file`. Mẫu đầy đủ ở `.env.docke
 |---|---|
 | `MONGO_URI` | Phase A: `mongodb+srv://...` của Atlas |
 | `MONGO_DB_NAME` | `capstone1` |
+| `MONGO_TIMEOUT_MS` | Timeout chọn server/connect (mặc định 10000) |
 | `JWT_SECRET` | Chuỗi ngẫu nhiên, không commit |
-| `GEMINI_API_KEY` | Key riêng từng người |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Thời hạn JWT (mặc định 1440) |
+| `GEMINI_API_KEY` | Key riêng từng người (bật AI) |
+| `GEMINI_MODEL` | Model Gemini dùng để sinh từ vựng |
+| `CF_*` | Cấu hình Cloudflare dự phòng, hiện chưa nối vào `ai_service` |
 | `CORS_ORIGINS` | JSON array; same-origin qua nginx nên thường không cần đổi |
+| `MASTERY_*` | Ngưỡng/điểm Mastery (đúng, sai, hint, fast bonus, threshold) |
+| `SESSION_MAX_QUESTIONS`, `MIN_LESSON_WORDS` | Giới hạn engine bài tập |
 
 Backend có thêm `retryWrites=True`, `appname`, timeout kết nối trong `app/db/mongodb.py` để phù hợp cả Atlas lẫn replica set.
 
@@ -102,7 +109,9 @@ Chưa bật. Khi được duyệt, bổ sung service `mongo1..3` + `mongo-init` 
    ```bash
    mongodump --uri "$MONGO_URI" --out backups/atlas-$(date +%Y%m%d)
    ```
-2. Đếm document các collection chính (`users`, `vocabularies`, `flashcard_progress`, `lesson_progress`).
+2. Đếm document các collection chính (`users`, `domains`, `lessons`, `vocabularies`,
+   `exercise_items`, `learning_sessions`, `answer_attempts`, `user_word_states`,
+   `lesson_progress`, `fsrs_review_logs`, `quiz_questions`, `flashcard_progress`).
 3. Khởi động `mongo1..3`, chạy `init-replica.sh`, chờ `rs.status()` có PRIMARY.
 4. `mongorestore --uri "mongodb://...replicaSet=rs0" backups/atlas-...`
 5. So sánh số document; chạy `api1` với URI mới; test `/api/health` + đăng nhập.

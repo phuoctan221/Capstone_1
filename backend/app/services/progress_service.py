@@ -291,26 +291,34 @@ async def complete_lesson(
     passed: bool,
     learned_count: int = 0,
     mastered_count: int = 0,
+    unit: int | None = None,
 ) -> bool:
-    """Mark a lesson complete once. Returns True only on first completion."""
+    """Mark a lesson unit complete once. Returns True only on first completion."""
     if not passed:
         return False
     db = get_database()
     now = datetime.now(timezone.utc)
+    query = {"user_id": user_id, "lesson_id": lesson_id}
+    updates = {
+        "user_id": user_id,
+        "lesson_id": lesson_id,
+        "topic": domain_for_topic(domain),
+        "completed": True,
+        "completed_at": now,
+        "learned_count": learned_count,
+        "mastered_count": mastered_count,
+        "updated_at": now,
+    }
+    if unit is not None:
+        query["unit"] = int(unit)
+        updates["unit"] = int(unit)
+    else:
+        query["unit"] = {"$exists": False}
     try:
         result = await db[LESSON_PROGRESS].update_one(
-            {"user_id": user_id, "lesson_id": lesson_id},
+            query,
             {
-                "$set": {
-                    "user_id": user_id,
-                    "lesson_id": lesson_id,
-                    "topic": domain_for_topic(domain),
-                    "completed": True,
-                    "completed_at": now,
-                    "learned_count": learned_count,
-                    "mastered_count": mastered_count,
-                    "updated_at": now,
-                },
+                "$set": updates,
                 "$setOnInsert": {"created_at": now},
             },
             upsert=True,
@@ -343,6 +351,13 @@ def _is_learned(mastery: dict) -> bool:
     return any(float(mastery.get(skill, 0) or 0) > 0 for skill in SKILLS)
 
 
+def _is_engaged(state: dict) -> bool:
+    """True once the learner answered an exercise or reviewed the card."""
+    return int(state.get("review_count") or 0) > 0 or _is_learned(
+        state.get("mastery") or {}
+    )
+
+
 def _is_mastered(mastery: dict, threshold: float | None = None) -> bool:
     limit = settings.MASTERY_THRESHOLD if threshold is None else threshold
     return all(float(mastery.get(skill, 0) or 0) >= limit for skill in SKILLS)
@@ -352,11 +367,12 @@ async def get_user_progress(user_id: str) -> dict:
     db = get_database()
     user = await db[USERS].find_one({"_id": user_id}) or {}
     pairs = await _states_with_vocab(user_id)
-    learned = sum(1 for state, _ in pairs if _is_learned(state.get("mastery") or {}))
+    learned = sum(1 for state, _ in pairs if _is_engaged(state))
     mastered = sum(1 for state, _ in pairs if _is_mastered(state.get("mastery") or {}))
-    lessons_completed = await db[LESSON_PROGRESS].count_documents(
-        {"user_id": user_id, "completed": True}
+    completed_lessons = await db[LESSON_PROGRESS].distinct(
+        "lesson_id", {"user_id": user_id, "completed": True}
     )
+    lessons_completed = len([value for value in completed_lessons if value])
     xp = int(user.get("xp", 0))
     return {
         "xp": xp,
@@ -389,14 +405,14 @@ async def get_summary(user_id: str) -> dict:
             domain, {"domain": domain, "started": 0, "mastered": 0, "total": 0}
         )
         bucket["total"] += 1
-        if _is_learned(mastery):
+        if _is_engaged(state):
             started += 1
             bucket["started"] += 1
         if _is_mastered(mastery):
             mastered += 1
             bucket["mastered"] += 1
         due_at = (state.get("fsrs") or {}).get("due_at")
-        if due_at and due_at <= now:
+        if due_at and due_at <= now and _is_engaged(state):
             due += 1
 
     correct = await db[ATTEMPTS].count_documents(
@@ -405,9 +421,10 @@ async def get_summary(user_id: str) -> dict:
     wrong = await db[ATTEMPTS].count_documents(
         {"user_id": user_id, "is_correct": False}
     )
-    lessons_completed = await db[LESSON_PROGRESS].count_documents(
-        {"user_id": user_id, "completed": True}
+    completed_lessons = await db[LESSON_PROGRESS].distinct(
+        "lesson_id", {"user_id": user_id, "completed": True}
     )
+    lessons_completed = len([value for value in completed_lessons if value])
     xp = int(user.get("xp", 0))
     return {
         "xp": xp,

@@ -50,8 +50,10 @@ async def ensure_indexes() -> None:
     # --- vocabularies --------------------------------------------------
     await db.vocabularies.create_index([("word", "text"), ("meaning", "text")])
     await db.vocabularies.create_index([("domain", 1), ("level", 1)])
-    await db.vocabularies.create_index([("word_key", 1)])
-    # Same word may exist with a different meaning or in another domain.
+    await db.vocabularies.create_index(
+        [("word_key", 1)], unique=True, name="word_key_unique"
+    )
+    # The legacy tuple index stays for existing deployments.
     await db.vocabularies.create_index(
         [("word_key", 1), ("domain", 1), ("meaning_key", 1)],
         unique=True,
@@ -97,13 +99,17 @@ async def ensure_indexes() -> None:
     await db.user_word_states.create_index([("user_id", 1), ("fsrs.due_at", 1)])
 
     # --- lesson progress ----------------------------------------------
-    # Legacy docs only had (user_id, topic). New docs are per lesson.
+    # Legacy docs only had (user_id, topic). New docs are per lesson unit.
     await _drop_index_if_exists(db.lesson_progress, LEGACY_LESSON_PROGRESS_INDEX)
+    await _drop_index_if_exists(db.lesson_progress, "uniq_user_lesson")
     await db.lesson_progress.create_index(
-        [("user_id", 1), ("lesson_id", 1)],
+        [("user_id", 1), ("lesson_id", 1), ("unit", 1)],
         unique=True,
-        partialFilterExpression={"lesson_id": {"$type": "string"}},
-        name="uniq_user_lesson",
+        partialFilterExpression={
+            "lesson_id": {"$type": "string"},
+            "unit": {"$type": "int"},
+        },
+        name="uniq_user_lesson_unit",
     )
     await db.lesson_progress.create_index([("user_id", 1), ("topic", 1)])
 
