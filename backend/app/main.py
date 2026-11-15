@@ -1,3 +1,4 @@
+from app.routers import speaking_router
 from contextlib import asynccontextmanager
 import asyncio
 import logging
@@ -67,6 +68,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(speaking_router.router)
 app.include_router(auth_router.router)
 app.include_router(vocabulary_router.router)
 app.include_router(vocabulary_router.alias_router)
