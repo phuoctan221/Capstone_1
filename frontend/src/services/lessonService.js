@@ -38,3 +38,15 @@ export async function submitStudyAnswer(vocabularyId, answer, correct) {
   });
   return data;
 }
+
+export async function analyzeMistake(mistakeData) {
+  const { data } = await api.post("/lessons/quiz/analyze-mistake", mistakeData);
+  return data;
+}
+
+export async function analyzeAllMistakes(mistakes) {
+  const { data } = await api.post("/lessons/quiz/analyze-all-mistakes", {
+    mistakes,
+  });
+  return data;
+}

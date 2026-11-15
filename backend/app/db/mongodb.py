@@ -12,6 +12,7 @@ LEGACY_LESSON_PROGRESS_INDEX = "user_id_1_topic_1"
 
 def is_auth_error(exc: Exception) -> bool:
     """Auth failures should not be retried as if they were network errors."""
+    
     if isinstance(exc, OperationFailure):
         text = str(exc).lower()
         return exc.code in (18, 13) or "auth" in text or "not authorized" in text
@@ -26,6 +27,7 @@ async def _drop_index_if_exists(collection, name: str) -> None:
         return
     if name in info:
         try:
+            
             await collection.drop_index(name)
         except OperationFailure:
             # Already dropped by a concurrent process.
