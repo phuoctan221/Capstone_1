@@ -23,6 +23,7 @@ class ExerciseItemOut(BaseModel):
 
 class SessionCreate(BaseModel):
     lesson_id: str
+    unit: int | None = Field(None, ge=1)
     skills: list[SkillName] = Field(
         default_factory=lambda: ["meaning", "spelling", "context"]
     )

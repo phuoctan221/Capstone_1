@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { fetchLesson } from "../services/lessonService";
 import { submitPracticeAnswer } from "../services/exerciseService";
 import { SKILLS, formatApiError } from "../constants/domains";
@@ -25,6 +25,9 @@ function makeCloze(word) {
 
 export default function PracticePage() {
   const { lessonId, skill } = useParams();
+  const [params] = useSearchParams();
+  const unitParam = params.get("unit");
+  const unitQuery = unitParam ? `?unit=${unitParam}` : "";
   const skillConfig = SKILLS.find((item) => item.id === skill);
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,14 +47,14 @@ export default function PracticePage() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    fetchLesson(lessonId).then((data) => {
+    fetchLesson(lessonId, unitParam || undefined).then((data) => {
       if (active) { setLesson(data); setError(""); startedAt.current = Date.now(); }
     }).catch((err) => { if (active) setError(formatApiError(err)); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [lessonId, refresh]);
+  }, [lessonId, unitParam, refresh]);
 
-  useEffect(() => { setIndex(0); setAnswer(""); setFeedback(null); setHint(false); setPending(null); setTotalCorrect(0); setXp(0); setFinished(false); startedAt.current = Date.now(); }, [lessonId, skill]);
+  useEffect(() => { setIndex(0); setAnswer(""); setFeedback(null); setHint(false); setPending(null); setTotalCorrect(0); setXp(0); setFinished(false); startedAt.current = Date.now(); }, [lessonId, unitParam, skill]);
 
   const queue = useMemo(() => {
     const words = Array.isArray(lesson?.words) ? lesson.words : [];
@@ -107,12 +110,12 @@ export default function PracticePage() {
   if (!skillConfig) return <PageError message="Kỹ năng không hợp lệ. Chọn Meaning, Spelling hoặc Context."/>;
   if (loading) return <PageLoading label="Đang chuẩn bị bài luyện tập..."/>;
   if (!lesson) return <PageError message={error || "Không tìm thấy bài học."} onRetry={() => setRefresh((value) => value+1)}/>;
-  if (!queue.length) return <div className="sv-page"><div className="sv-breadcrumb"><Link to={`/lessons/${lessonId}`}>← Quay lại bài học</Link></div><EmptyState title="Chưa đủ câu hỏi cho kỹ năng này" description={skill === "context" ? "Cần các từ có câu ví dụ chứa chính từ cần điền. Backend nên cung cấp ngân hàng Context đã kiểm duyệt." : "Cần thêm từ vựng hoặc nghĩa khác nhau trong bài học trước khi luyện."}><Link className="sv-btn sv-btn-primary" to={`/lessons/${lessonId}`}>Về bài học</Link></EmptyState></div>;
+  if (!queue.length) return <div className="sv-page"><div className="sv-breadcrumb"><Link to={`/lessons/${lessonId}${unitQuery}`}>← Quay lại bài học</Link></div><EmptyState title="Chưa đủ câu hỏi cho kỹ năng này" description={skill === "context" ? "Cần các từ có câu ví dụ chứa chính từ cần điền. Backend nên cung cấp ngân hàng Context đã kiểm duyệt." : "Cần thêm từ vựng hoặc nghĩa khác nhau trong bài học trước khi luyện."}><Link className="sv-btn sv-btn-primary" to={`/lessons/${lessonId}${unitQuery}`}>Về bài học</Link></EmptyState></div>;
 
-  if (finished) return <div className="sv-page"><div className="sv-practice-result"><span className="sv-success-symbol">✓</span><span className="sv-eyebrow">HOÀN THÀNH BUỔI HỌC</span><h1>Bạn đã hoàn thành {skillConfig.label}!</h1><p>Kết quả đã được backend chấm và lưu vào tiến độ học tập.</p><div className="sv-result-grid"><div><strong>{totalCorrect}/{queue.length}</strong><span>Câu đúng</span></div><div><strong>{Math.round(totalCorrect / queue.length * 100)}%</strong><span>Độ chính xác</span></div><div><strong>+{xp}</strong><span>XP nhận được</span></div></div><Link to={`/lessons/${lessonId}`} className="sv-btn sv-btn-primary">Trở về bài học →</Link></div></div>;
+  if (finished) return <div className="sv-page"><div className="sv-practice-result"><span className="sv-success-symbol">✓</span><span className="sv-eyebrow">HOÀN THÀNH BUỔI HỌC</span><h1>Bạn đã hoàn thành {skillConfig.label}!</h1><p>Kết quả đã được backend chấm và lưu vào tiến độ học tập.</p><div className="sv-result-grid"><div><strong>{totalCorrect}/{queue.length}</strong><span>Câu đúng</span></div><div><strong>{Math.round(totalCorrect / queue.length * 100)}%</strong><span>Độ chính xác</span></div><div><strong>+{xp}</strong><span>XP nhận được</span></div></div><Link to={`/lessons/${lessonId}${unitQuery}`} className="sv-btn sv-btn-primary">Trở về bài học →</Link></div></div>;
 
   return <div className="sv-page sv-practice-page">
-    <div className="sv-practice-top"><Link to={`/lessons/${lessonId}`} className="sv-back-link">← Thoát bài luyện</Link><div><span className="sv-level-tag">{skillConfig.label}</span><span className="sv-muted-small"> Câu {index + 1} / {queue.length}</span></div></div>
+    <div className="sv-practice-top"><Link to={`/lessons/${lessonId}${unitQuery}`} className="sv-back-link">← Thoát bài luyện</Link><div><span className="sv-level-tag">{skillConfig.label}</span><span className="sv-muted-small"> Câu {index + 1} / {queue.length}</span></div></div>
     <div className="sv-progress-track" role="progressbar" aria-valuenow={index + 1} aria-valuemin={0} aria-valuemax={queue.length}><div style={{ width: `${(index + 1) / queue.length * 100}%` }}/></div>
     <div className="sv-practice-panel"><div className="sv-practice-heading"><span className="sv-eyebrow">{skillConfig.subtitle.toUpperCase()}</span><span className="sv-question-number">{String(index+1).padStart(2,"0")} / {String(queue.length).padStart(2,"0")}</span></div>
       {skill === "meaning" && <><h1>“{current.word}” có nghĩa là gì?</h1><p className="sv-practice-tip">Chọn một đáp án. Hệ thống sẽ chấm điểm trên máy chủ.</p><div className="sv-options-grid">{choices.map((option, i) => <button key={`${option}-${i}`} type="button" className={`sv-option${answer === option ? " selected" : ""}`} disabled={busy || Boolean(feedback) || Boolean(pending)} onClick={() => submit(option)}><span className="sv-option-letter">{String.fromCharCode(65+i)}</span>{option}</button>)}</div></>}

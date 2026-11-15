@@ -13,8 +13,15 @@ async def list_lessons(user: dict = Depends(get_current_user)):
 
 
 @router.get("/{lesson_id}")
-async def get_lesson(lesson_id: str, user: dict = Depends(get_current_user)):
-    lesson = await lesson_service.get_lesson(lesson_id, user["id"])
+async def get_lesson(
+    lesson_id: str,
+    unit: int | None = Query(None, ge=1),
+    user: dict = Depends(get_current_user),
+):
+    try:
+        lesson = await lesson_service.get_lesson(lesson_id, user["id"], unit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
     return lesson
@@ -24,18 +31,29 @@ async def get_lesson(lesson_id: str, user: dict = Depends(get_current_user)):
 async def get_quiz(
     lesson_id: str,
     count: int = Query(10, ge=3, le=50),
+    unit: int | None = Query(None, ge=1),
     user: dict = Depends(get_current_user),
 ):
-    questions = await quiz_service.build_quiz(lesson_id, user["id"], count)
+    try:
+        questions = await quiz_service.build_quiz(
+            lesson_id, user["id"], count, unit
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not questions:
         raise HTTPException(status_code=404, detail="Not enough words for a quiz")
-    return {"lesson_id": lesson_id, "questions": questions}
+    return {
+        "lesson_id": lesson_id,
+        "unit": unit,
+        "questions": questions,
+    }
 
 
 @router.post("/{lesson_id}/quiz/submit")
 async def submit_quiz(
     lesson_id: str,
     payload: QuizSubmit,
+    unit: int | None = Query(None, ge=1),
     user: dict = Depends(get_current_user),
 ):
     total = len(payload.results)
@@ -78,7 +96,12 @@ async def submit_quiz(
     percent = round(correct / total * 100)
     passed = percent >= 70
     if passed:
-        lesson = await lesson_service.get_lesson(lesson_id, user["id"])
+        try:
+            lesson = await lesson_service.get_lesson(
+                lesson_id, user["id"], unit
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         if lesson:
             await progress_service.complete_lesson(
                 user["id"],
@@ -87,6 +110,7 @@ async def submit_quiz(
                 True,
                 lesson.get("learned_count", 0),
                 lesson.get("mastered_count", 0),
+                unit=lesson.get("unit"),
             )
 
     progress = await progress_service.get_user_progress(user["id"])

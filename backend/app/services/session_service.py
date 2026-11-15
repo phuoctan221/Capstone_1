@@ -23,6 +23,7 @@ def serialize_session(doc: dict) -> dict:
         "lesson_id": doc["lesson_id"],
         "domain": doc.get("domain", "general"),
         "level": doc.get("level", "A1"),
+        "unit": doc.get("unit"),
         "skills": list(doc.get("skills") or []),
         "status": doc.get("status", "active"),
         "question_count": int(doc.get("question_count", 0)),
@@ -88,9 +89,13 @@ async def _select_items(
 
 
 async def create_session(
-    user_id: str, lesson_id: str, skills: list[str], count: int
+    user_id: str,
+    lesson_id: str,
+    skills: list[str],
+    count: int,
+    unit: int | None = None,
 ) -> dict:
-    lesson = await lesson_service.get_lesson(lesson_id, user_id)
+    lesson = await lesson_service.get_lesson(lesson_id, user_id, unit)
     if not lesson:
         raise ValueError("Lesson not found")
     domain_slug, level = lesson_service.parse_lesson_id(lesson_id)
@@ -101,8 +106,10 @@ async def create_session(
     if not requested:
         raise ValueError("At least one valid skill is required")
 
-    words = await lesson_service.get_lesson_words(lesson["domain"], level)
-    if len(words) < settings.MIN_LESSON_WORDS:
+    words = await lesson_service.get_lesson_words(
+        lesson["domain"], level, lesson.get("unit")
+    )
+    if not words:
         raise ValueError("Lesson does not have enough words for exercises")
 
     items = await _select_items(words, requested, count)
@@ -120,6 +127,7 @@ async def create_session(
         "lesson_id": lesson_id,
         "domain": lesson["domain"],
         "level": level,
+        "unit": lesson.get("unit"),
         "skills": requested,
         "exercise_item_ids": [item["exercise_item_id"] for item in items],
         "attempt_ids": [],
@@ -232,7 +240,9 @@ async def finish_session(user_id: str, session_id: str) -> dict:
     lesson_completed = False
     xp_gained = 0
     if passed:
-        lesson = await lesson_service.get_lesson(session["lesson_id"], user_id)
+        lesson = await lesson_service.get_lesson(
+            session["lesson_id"], user_id, session.get("unit")
+        )
         learned_count = int((lesson or {}).get("learned_count", 0))
         mastered_count = int((lesson or {}).get("mastered_count", 0))
         lesson_completed = await progress_service.complete_lesson(
@@ -242,6 +252,7 @@ async def finish_session(user_id: str, session_id: str) -> dict:
             True,
             learned_count,
             mastered_count,
+            unit=(lesson or {}).get("unit"),
         )
         if lesson_completed:
             bonus = await progress_service.add_xp(

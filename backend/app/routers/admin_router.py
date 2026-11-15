@@ -46,6 +46,7 @@ USER_DATA_COLLECTIONS = [
     "fsrs_review_logs",
     "lesson_progress",
     "quiz_questions",
+    "flashcard_progress",
 ]
 
 VALID_INTERESTS = {
@@ -68,6 +69,8 @@ def _clean_user(doc: dict) -> dict:
     doc["xp"] = int(doc.get("xp", 0) or 0)
     doc["streak"] = int(doc.get("streak", 0) or 0)
     doc["daily_goal"] = int(doc.get("daily_goal", 10) or 10)
+    doc["daily_new_limit"] = int(doc.get("daily_new_limit", 10) or 10)
+    doc["daily_review_limit"] = int(doc.get("daily_review_limit", 30) or 30)
     doc["is_active"] = doc.get("is_active", True) is not False
     return doc
 
@@ -317,6 +320,7 @@ async def admin_list_lessons():
                     or f"{word_count} từ vựng {meta['name']} cấp độ {level}",
                     "order": doc.get("order", order),
                     "word_count": word_count,
+                    "unit_count": lesson_service.unit_count(word_count),
                     "exercise_count": exercise_count,
                     "has_exercises": word_count >= settings.MIN_LESSON_WORDS,
                     "metadata_exists": slug in metadata,
@@ -669,11 +673,15 @@ async def admin_set_role(
             raise HTTPException(
                 status_code=400, detail="You cannot remove your own admin role"
             )
-        admin_count = await db.users.count_documents({"role": "admin"})
-        if admin_count <= 1:
-            raise HTTPException(
-                status_code=400, detail="Cannot demote the last admin"
+        is_active_admin = user.get("is_active") is not False
+        if is_active_admin:
+            active_admins = await db.users.count_documents(
+                {"role": "admin", "is_active": {"$ne": False}}
             )
+            if active_admins <= 1:
+                raise HTTPException(
+                    status_code=400, detail="Cannot demote the last active admin"
+                )
     await db.users.update_one(
         {"_id": user_id},
         {"$set": {"role": value, "updated_at": datetime.now(timezone.utc)}},
@@ -754,6 +762,10 @@ def _validate_user_updates(payload: AdminUserUpdate) -> dict:
         updates["interests"] = interests
     if payload.daily_goal is not None:
         updates["daily_goal"] = int(payload.daily_goal)
+    if payload.daily_new_limit is not None:
+        updates["daily_new_limit"] = int(payload.daily_new_limit)
+    if payload.daily_review_limit is not None:
+        updates["daily_review_limit"] = int(payload.daily_review_limit)
     return updates
 
 
@@ -773,6 +785,14 @@ async def admin_update_user(
 
     new_email = updates.get("email")
     if new_email is not None and new_email != user_id:
+        if user_id == admin["id"]:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Không thể đổi email của chính mình tại trang quản trị. "
+                    "Việc này sẽ làm phiên đăng nhập hiện tại mất hiệu lực."
+                ),
+            )
         existing = await db.users.find_one({"_id": new_email})
         if existing:
             raise HTTPException(status_code=409, detail="Email already registered")
@@ -809,11 +829,13 @@ async def admin_delete_user(
         raise HTTPException(status_code=404, detail="User not found")
     if user_id == admin["id"]:
         raise HTTPException(status_code=400, detail="You cannot delete your own account")
-    if normalize_role(user.get("role")) == "admin":
-        admin_count = await db.users.count_documents({"role": "admin"})
-        if admin_count <= 1:
+    if normalize_role(user.get("role")) == "admin" and user.get("is_active") is not False:
+        active_admins = await db.users.count_documents(
+            {"role": "admin", "is_active": {"$ne": False}}
+        )
+        if active_admins <= 1:
             raise HTTPException(
-                status_code=400, detail="Cannot delete the last admin"
+                status_code=400, detail="Cannot delete the last active admin"
             )
     deleted: dict[str, int] = {}
     for collection in USER_DATA_COLLECTIONS:
@@ -841,7 +863,9 @@ async def admin_reset_password(
             "$set": {
                 "password_hash": hash_password(password),
                 "updated_at": datetime.now(timezone.utc),
-            }
+            },
+            # Invalidate every existing token for this account.
+            "$inc": {"token_version": 1},
         },
     )
     # Plain password is returned exactly once so the admin can hand it over.
@@ -869,15 +893,16 @@ async def admin_set_user_status(
                 raise HTTPException(
                     status_code=400, detail="Cannot lock the last active admin"
                 )
-    await db.users.update_one(
-        {"_id": user_id},
-        {
-            "$set": {
-                "is_active": bool(payload.is_active),
-                "updated_at": datetime.now(timezone.utc),
-            }
-        },
-    )
+    update: dict = {
+        "$set": {
+            "is_active": bool(payload.is_active),
+            "updated_at": datetime.now(timezone.utc),
+        }
+    }
+    if not payload.is_active:
+        # Locking ends all active sessions; unlocking requires a fresh login.
+        update["$inc"] = {"token_version": 1}
+    await db.users.update_one({"_id": user_id}, update)
     return {"id": user_id, "is_active": bool(payload.is_active)}
 
 

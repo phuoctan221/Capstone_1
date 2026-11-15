@@ -37,11 +37,7 @@ def _prepare(data: dict) -> dict:
 
 
 def _unique_selector(doc: dict) -> dict:
-    return {
-        "word_key": doc["word_key"],
-        "domain": doc["domain"],
-        "meaning_key": doc["meaning_key"],
-    }
+    return {"word_key": doc["word_key"]}
 
 
 async def list_vocabularies(
@@ -146,47 +142,47 @@ async def delete_vocabulary(vocab_id: str) -> bool:
     return True
 
 
-async def create_vocabularies_bulk(items: list[dict]) -> dict:
-    """Bulk upsert keyed by (word, domain, meaning) so re-runs are safe.
+async def create_vocabularies_bulk(
+    items: list[dict], *, update_existing: bool = True
+) -> dict:
+    """Bulk upsert keyed by word_key so re-runs are safe.
 
-    The same word may legitimately appear with a different meaning or domain.
+    The vocabulary bank stores one document per word_key (enforced by the
+    unique word_key index). Set ``update_existing=False`` to only create
+    missing words, leaving already enriched documents untouched.
     """
     db = get_database()
     if not items:
-        return {"saved": 0, "created": 0, "updated": 0}
+        return {"saved": 0, "created": 0, "updated": 0, "skipped": 0}
 
     now = datetime.now(timezone.utc)
-    prepared: dict[tuple[str, str, str], dict] = {}
+    prepared: dict[str, dict] = {}
     for item in items:
         doc = _prepare(item)
         if not doc["word"] or not doc["meaning"]:
             continue
-        key = (doc["word_key"], doc["domain"], doc["meaning_key"])
-        prepared[key] = doc
+        prepared[doc["word_key"]] = doc
 
     if not prepared:
-        return {"saved": 0, "created": 0, "updated": 0}
+        return {"saved": 0, "created": 0, "updated": 0, "skipped": 0}
 
-    word_keys = {key[0] for key in prepared}
-    existing: dict[tuple[str, str, str], ObjectId] = {}
+    existing: dict[str, ObjectId] = {}
     async for doc in db[COLLECTION].find(
-        {"word_key": {"$in": list(word_keys)}},
-        {"word_key": 1, "domain": 1, "meaning_key": 1, "topic": 1},
+        {"word_key": {"$in": list(prepared)}},
+        {"word_key": 1},
     ):
-        existing[
-            (
-                doc.get("word_key"),
-                domain_for_topic(doc.get("domain") or doc.get("topic")),
-                doc.get("meaning_key"),
-            )
-        ] = doc["_id"]
+        if doc.get("word_key"):
+            existing[doc["word_key"]] = doc["_id"]
 
     operations = []
-    created = updated = 0
-    for key, doc in prepared.items():
+    created = updated = skipped = 0
+    for word_key, doc in prepared.items():
         payload = {**doc, "updated_at": now}
-        current_id = existing.get(key)
+        current_id = existing.get(word_key)
         if current_id is not None:
+            if not update_existing:
+                skipped += 1
+                continue
             operations.append(
                 UpdateOne(
                     {"_id": current_id},
@@ -197,11 +193,7 @@ async def create_vocabularies_bulk(items: list[dict]) -> dict:
         else:
             operations.append(
                 UpdateOne(
-                    {
-                        "word_key": key[0],
-                        "domain": key[1],
-                        "meaning_key": key[2],
-                    },
+                    {"word_key": word_key},
                     {"$set": payload, "$setOnInsert": {"created_at": now}},
                     upsert=True,
                 )
@@ -210,4 +202,9 @@ async def create_vocabularies_bulk(items: list[dict]) -> dict:
 
     if operations:
         await db[COLLECTION].bulk_write(operations, ordered=False)
-    return {"saved": len(operations), "created": created, "updated": updated}
+    return {
+        "saved": len(operations),
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+    }

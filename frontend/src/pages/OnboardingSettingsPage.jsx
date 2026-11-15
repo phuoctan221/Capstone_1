@@ -25,6 +25,8 @@ export default function OnboardingSettingsPage() {
   const [level, setLevel] = useState(user?.learning_level || "");
   const [selected, setSelected] = useState(user?.interests || []);
   const [dailyGoal, setDailyGoal] = useState(user?.daily_goal || 10);
+  const [dailyNewLimit, setDailyNewLimit] = useState(user?.daily_new_limit || 10);
+  const [dailyReviewLimit, setDailyReviewLimit] = useState(user?.daily_review_limit || 30);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
@@ -33,6 +35,8 @@ export default function OnboardingSettingsPage() {
     setLevel(user?.learning_level || "");
     setSelected(user?.interests || []);
     setDailyGoal(user?.daily_goal || 10);
+    setDailyNewLimit(user?.daily_new_limit || 10);
+    setDailyReviewLimit(user?.daily_review_limit || 30);
   }, [user]);
 
   const toggle = (value) => {
@@ -59,8 +63,18 @@ export default function OnboardingSettingsPage() {
       return;
     }
     const goal = Number(dailyGoal);
+    const newLimit = Number(dailyNewLimit);
+    const reviewLimit = Number(dailyReviewLimit);
     if (!Number.isInteger(goal) || goal < 5 || goal > 100) {
       setError("Mục tiêu học mỗi ngày phải từ 5 đến 100 từ.");
+      return;
+    }
+    if (!Number.isInteger(newLimit) || newLimit < 1 || newLimit > 100) {
+      setError("Số từ mới mỗi ngày phải từ 1 đến 100 từ.");
+      return;
+    }
+    if (!Number.isInteger(reviewLimit) || reviewLimit < 1 || reviewLimit > 200) {
+      setError("Số từ ôn mỗi ngày phải từ 1 đến 200 từ.");
       return;
     }
     setLoading(true);
@@ -71,6 +85,8 @@ export default function OnboardingSettingsPage() {
         learning_level: level,
         interests: selected,
         daily_goal: goal,
+        daily_new_limit: newLimit,
+        daily_review_limit: reviewLimit,
         onboarded: true,
       });
       setOk("Đã lưu cài đặt học tập.");
@@ -195,6 +211,44 @@ export default function OnboardingSettingsPage() {
               <span className="goal-suffix">từ/ngày</span>
             </div>
             <small className="muted">Giới hạn từ 5 đến 100 từ mỗi ngày.</small>
+          </div>
+          <div className="goal-input-group">
+            <label htmlFor="settings-new-limit">Từ mới mỗi ngày</label>
+            <div className="goal-input-wrap">
+              <input
+                id="settings-new-limit"
+                type="number"
+                min={1}
+                max={100}
+                value={dailyNewLimit}
+                onChange={(e) => {
+                  setDailyNewLimit(e.target.value);
+                  setError("");
+                  setOk("");
+                }}
+                inputMode="numeric"
+              />
+              <span className="goal-suffix">từ/ngày</span>
+            </div>
+          </div>
+          <div className="goal-input-group">
+            <label htmlFor="settings-review-limit">Từ ôn mỗi ngày</label>
+            <div className="goal-input-wrap">
+              <input
+                id="settings-review-limit"
+                type="number"
+                min={1}
+                max={200}
+                value={dailyReviewLimit}
+                onChange={(e) => {
+                  setDailyReviewLimit(e.target.value);
+                  setError("");
+                  setOk("");
+                }}
+                inputMode="numeric"
+              />
+              <span className="goal-suffix">từ/ngày</span>
+            </div>
           </div>
         </div>
       </div>

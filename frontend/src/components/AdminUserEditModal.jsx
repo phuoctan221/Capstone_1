@@ -3,12 +3,26 @@ import { DOMAINS } from "../constants/domains";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
-export default function AdminUserEditModal({ user, busy, error, onSave, onClose }) {
+const INTEREST_LABELS = {
+  travel: "Du lịch",
+  science: "Khoa học",
+  academic: "Học thuật",
+  "daily-life": "Giao tiếp hằng ngày",
+};
+
+const VALID_INTERESTS = new Set([
+  ...DOMAINS.map((domain) => domain.id),
+  ...Object.keys(INTEREST_LABELS),
+]);
+
+export default function AdminUserEditModal({ user, isSelf, busy, error, onSave, onClose }) {
   const [username, setUsername] = useState(user.username || "");
   const [email, setEmail] = useState(user.email || "");
   const [learningLevel, setLearningLevel] = useState(user.learning_level || "");
   const [dailyGoal, setDailyGoal] = useState(Number(user.daily_goal) || 10);
-  const [interests, setInterests] = useState(user.interests || []);
+  const [interests, setInterests] = useState(
+    (user.interests || []).filter((value) => VALID_INTERESTS.has(value)),
+  );
   const [localError, setLocalError] = useState("");
 
   useEffect(() => {
@@ -22,8 +36,10 @@ export default function AdminUserEditModal({ user, busy, error, onSave, onClose 
   const options = [
     ...DOMAINS.map((domain) => ({ id: domain.id, label: domain.label })),
     ...[...new Set(user.interests || [])]
-      .filter((value) => !DOMAINS.some((domain) => domain.id === value))
-      .map((value) => ({ id: value, label: value })),
+      .filter(
+        (value) => !DOMAINS.some((domain) => domain.id === value) && VALID_INTERESTS.has(value),
+      )
+      .map((value) => ({ id: value, label: INTEREST_LABELS[value] || value })),
   ];
 
   function toggleInterest(id) {
@@ -95,7 +111,14 @@ export default function AdminUserEditModal({ user, busy, error, onSave, onClose 
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             autoComplete="off"
+            disabled={isSelf}
+            title={isSelf ? "Không thể đổi email của chính mình tại trang quản trị" : undefined}
           />
+          {isSelf && (
+            <small className="sv-admin-muted">
+              Không thể đổi email của chính mình tại đây (email là khóa đăng nhập).
+            </small>
+          )}
           <div className="sv-admin-form-grid">
             <div>
               <label className="sv-form-label" htmlFor="sv-edit-level">Trình độ</label>

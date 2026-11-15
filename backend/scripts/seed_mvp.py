@@ -7,7 +7,7 @@ Chay tu thu muc backend/:
     .venv\\Scripts\\python.exe scripts/seed_mvp.py --apply --allow-shared
 
 The operation is idempotent: re-running never creates duplicate words and never
-overwrites a word that already has the same (word, domain, meaning) key.
+overwrites a word that already exists (enriched data is preserved).
 """
 from __future__ import annotations
 
@@ -52,7 +52,9 @@ def load_records(path: Path) -> list[dict]:
     return records
 
 
-async def run_seed(apply: bool, source: Path = DEFAULT_SOURCE) -> dict:
+async def run_seed(
+    apply: bool, source: Path = DEFAULT_SOURCE, skip_vocabulary: bool = False
+) -> dict:
     db = get_database()
     records = load_records(source)
     report = {"source_records": len(records), "applied": apply}
@@ -62,7 +64,12 @@ async def run_seed(apply: bool, source: Path = DEFAULT_SOURCE) -> dict:
         return report
 
     report["domains"] = await ensure_domains()
-    report["vocabulary"] = await create_vocabularies_bulk(records)
+    if skip_vocabulary:
+        report["vocabulary"] = "skipped"
+    else:
+        report["vocabulary"] = await create_vocabularies_bulk(
+            records, update_existing=False
+        )
     report["lessons"] = await seed_lessons()
 
     exercises = 0
@@ -89,6 +96,11 @@ def parse_args() -> argparse.Namespace:
         help="allow writing to a database whose name does not contain 'test'",
     )
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
+    parser.add_argument(
+        "--skip-vocabulary",
+        action="store_true",
+        help="only rebuild lessons/exercise bank; leave vocabularies untouched",
+    )
     return parser.parse_args()
 
 
@@ -105,7 +117,7 @@ async def main() -> int:
     print(f"Database: {settings.mongo_target}")
     await connect_to_mongo()
     try:
-        report = await run_seed(args.apply, args.source)
+        report = await run_seed(args.apply, args.source, args.skip_vocabulary)
     finally:
         await close_mongo_connection()
 

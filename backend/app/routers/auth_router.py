@@ -38,6 +38,8 @@ def _user_out(user: dict) -> dict:
         "interests": user.get("interests") or [],
         "onboarded": bool(user.get("onboarded")),
         "daily_goal": user.get("daily_goal") or 10,
+        "daily_new_limit": user.get("daily_new_limit") or 10,
+        "daily_review_limit": user.get("daily_review_limit") or 30,
         "xp": int(user.get("xp", 0) or 0),
         "streak": int(user.get("streak", 0) or 0),
         "profile_completed_at": user.get("profile_completed_at"),
@@ -67,12 +69,15 @@ async def register(data: UserCreate):
         "interests": [],
         "onboarded": False,
         "daily_goal": 10,
+        "daily_new_limit": 10,
+        "daily_review_limit": 30,
         "xp": 0,
         "streak": 0,
+        "token_version": 0,
     }
     await db.users.insert_one(user_doc)
 
-    token = auth_service.create_access_token(email)
+    token = auth_service.create_access_token(email, 0)
     return Token(access_token=token, user=_user_out(user_doc))
 
 
@@ -94,7 +99,9 @@ async def login(data: UserLogin):
             detail="Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.",
         )
 
-    token = auth_service.create_access_token(str(user["_id"]))
+    token = auth_service.create_access_token(
+        str(user["_id"]), auth_service.token_version_of(user)
+    )
     return Token(access_token=token, user=_user_out(user))
 
 
@@ -141,6 +148,10 @@ async def update_me(
         updates["interests"] = interests
     if data.daily_goal is not None:
         updates["daily_goal"] = int(data.daily_goal)
+    if data.daily_new_limit is not None:
+        updates["daily_new_limit"] = int(data.daily_new_limit)
+    if data.daily_review_limit is not None:
+        updates["daily_review_limit"] = int(data.daily_review_limit)
     if data.onboarded is not None:
         updates["onboarded"] = bool(data.onboarded)
     if not updates:
@@ -185,9 +196,18 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mật khẩu mới phải khác mật khẩu hiện tại",
         )
+    new_version = auth_service.token_version_of(user) + 1
     updates = {
         "password_hash": auth_service.hash_password(data.new_password),
+        "token_version": new_version,
         "updated_at": datetime.now(timezone.utc),
     }
     await db.users.update_one({"_id": user["id"]}, {"$set": updates})
-    return {"message": "Đổi mật khẩu thành công"}
+    # Re-issue a token for the current session so other devices are logged out
+    # while this one keeps working.
+    token = auth_service.create_access_token(user["id"], new_version)
+    return {
+        "message": "Đổi mật khẩu thành công",
+        "access_token": token,
+        "token_type": "bearer",
+    }

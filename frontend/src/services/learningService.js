@@ -18,3 +18,9 @@ export async function fetchStats() {
   const { data } = await api.get("/learning/stats");
   return data;
 }
+
+export async function fetchDailyPlan() {
+  const tzOffset = -new Date().getTimezoneOffset();
+  const { data } = await api.get("/learning/daily", { params: { tz_offset: tzOffset } });
+  return data;
+}

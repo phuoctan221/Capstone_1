@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.models.exercise import AnswerSubmit, SessionCreate
 from app.models.learning import FSRSReviewRequest, ReviewStats
-from app.services import learning_service, session_service
+from app.services import daily_service, learning_service, session_service
 from app.services.auth_service import get_current_user
 
 router = APIRouter(prefix="/learning", tags=["learning"])
@@ -34,6 +34,17 @@ async def stats(user: dict = Depends(get_current_user)):
     return await learning_service.get_stats(user["id"])
 
 
+@router.get("/daily")
+async def daily_plan(
+    tz_offset: int = Query(0, ge=-720, le=840),
+    user: dict = Depends(get_current_user),
+):
+    try:
+        return await daily_service.get_daily_plan(user["id"], tz_offset=tz_offset)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 # --- Learning sessions -------------------------------------------------
 
 
@@ -43,7 +54,11 @@ async def create_session(
 ):
     try:
         return await session_service.create_session(
-            user["id"], data.lesson_id, list(data.skills), data.count
+            user["id"],
+            data.lesson_id,
+            list(data.skills),
+            data.count,
+            data.unit,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

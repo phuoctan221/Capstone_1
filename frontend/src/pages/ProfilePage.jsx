@@ -41,6 +41,8 @@ export default function ProfilePage() {
   const [progress, setProgress] = useState(null);
   const [username, setUsername] = useState(user?.username || "");
   const [dailyGoal, setDailyGoal] = useState(user?.daily_goal || 10);
+  const [dailyNewLimit, setDailyNewLimit] = useState(user?.daily_new_limit || 10);
+  const [dailyReviewLimit, setDailyReviewLimit] = useState(user?.daily_review_limit || 30);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -57,6 +59,8 @@ export default function ProfilePage() {
     setProfile(user);
     setUsername(user?.username || "");
     setDailyGoal(user?.daily_goal || 10);
+    setDailyNewLimit(user?.daily_new_limit || 10);
+    setDailyReviewLimit(user?.daily_review_limit || 30);
   }, [user]);
 
   useEffect(() => {
@@ -69,6 +73,8 @@ export default function ProfilePage() {
           setProfile(me.value);
           setUsername(me.value?.username || "");
           setDailyGoal(me.value?.daily_goal || 10);
+          setDailyNewLimit(me.value?.daily_new_limit || 10);
+          setDailyReviewLimit(me.value?.daily_review_limit || 30);
         }
         if (pg.status === "fulfilled") {
           setProgress(pg.value);
@@ -96,8 +102,18 @@ export default function ProfilePage() {
       return;
     }
     const goal = Number(dailyGoal);
+    const newLimit = Number(dailyNewLimit);
+    const reviewLimit = Number(dailyReviewLimit);
     if (!Number.isInteger(goal) || goal < 5 || goal > 100) {
       setError("Mục tiêu học mỗi ngày phải từ 5 đến 100 từ.");
+      return;
+    }
+    if (!Number.isInteger(newLimit) || newLimit < 1 || newLimit > 100) {
+      setError("Số từ mới mỗi ngày phải từ 1 đến 100 từ.");
+      return;
+    }
+    if (!Number.isInteger(reviewLimit) || reviewLimit < 1 || reviewLimit > 200) {
+      setError("Số từ ôn mỗi ngày phải từ 1 đến 200 từ.");
       return;
     }
     setSaving(true);
@@ -107,6 +123,8 @@ export default function ProfilePage() {
       await updateProfile({
         username: username.trim(),
         daily_goal: goal,
+        daily_new_limit: newLimit,
+        daily_review_limit: reviewLimit,
       });
       setOk("Đã cập nhật hồ sơ cá nhân.");
     } catch (err) {
@@ -242,6 +260,46 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            <div className="form-group">
+              <label htmlFor="profile-new-limit">Từ mới mỗi ngày</label>
+              <div className="profile-input-suffix">
+                <input
+                  id="profile-new-limit"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={dailyNewLimit}
+                  onChange={(e) => {
+                    setDailyNewLimit(e.target.value);
+                    setError("");
+                    setOk("");
+                  }}
+                  inputMode="numeric"
+                />
+                <span className="profile-suffix-text">từ/ngày</span>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="profile-review-limit">Từ ôn mỗi ngày</label>
+              <div className="profile-input-suffix">
+                <input
+                  id="profile-review-limit"
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={dailyReviewLimit}
+                  onChange={(e) => {
+                    setDailyReviewLimit(e.target.value);
+                    setError("");
+                    setOk("");
+                  }}
+                  inputMode="numeric"
+                />
+                <span className="profile-suffix-text">từ/ngày</span>
+              </div>
+            </div>
+
             {error && <p className="auth-error" role="alert">{error}</p>}
             {ok && <p className="profile-success">{ok}</p>}
 
@@ -261,101 +319,103 @@ export default function ProfilePage() {
           {loading && <p className="muted" style={{ marginTop: "0.8rem" }}>Đang đồng bộ dữ liệu...</p>}
         </div>
 
-        <div className="card profile-summary-info-card">
-          <div className="profile-card-header">
-            <h3>Tóm tắt trình độ</h3>
-          </div>
-          <div className="profile-summary-block">
-            <div className="profile-summary-row">
-              <span className="profile-summary-label">Trình độ</span>
-              <span className="profile-pill">{level ? `${level}${LEVEL_DESC[level] ? ` · ${LEVEL_DESC[level]}` : ""}` : "Chưa thiết lập"}</span>
+        <div className="profile-side-column">
+          <div className="card profile-summary-info-card">
+            <div className="profile-card-header">
+              <h3>Tóm tắt trình độ</h3>
             </div>
-            <div className="profile-summary-row">
-              <span className="profile-summary-label">Lĩnh vực</span>
-              <div className="profile-chip-list">
-                {interests.length === 0 && <span className="muted">Chưa thiết lập</span>}
-                {interests.map((item) => (
-                  <span key={item} className="profile-chip">
-                    {INTEREST_LABELS[item] || item}
-                  </span>
-                ))}
+            <div className="profile-summary-block">
+              <div className="profile-summary-row">
+                <span className="profile-summary-label">Trình độ</span>
+                <span className="profile-pill">{level ? `${level}${LEVEL_DESC[level] ? ` · ${LEVEL_DESC[level]}` : ""}` : "Chưa thiết lập"}</span>
+              </div>
+              <div className="profile-summary-row">
+                <span className="profile-summary-label">Lĩnh vực</span>
+                <div className="profile-chip-list">
+                  {interests.length === 0 && <span className="muted">Chưa thiết lập</span>}
+                  {interests.map((item) => (
+                    <span key={item} className="profile-chip">
+                      {INTEREST_LABELS[item] || item}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
+            <div className="profile-summary-footer">
+              <button className="profile-btn-secondary" type="button" onClick={() => navigate("/settings/learning")}>
+                Cài đặt học tập
+              </button>
+            </div>
           </div>
-          <div className="profile-summary-footer">
-            <button className="profile-btn-secondary" type="button" onClick={() => navigate("/settings/learning")}>
-              Cài đặt học tập
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <div className="card profile-password-card">
-        <div className="profile-card-header">
-          <h3>Đổi mật khẩu</h3>
+          <div className="card profile-password-card">
+            <div className="profile-card-header">
+              <h3>Đổi mật khẩu</h3>
+            </div>
+            <form onSubmit={savePassword} className="profile-password-form">
+              <div className="profile-password-grid">
+                <div className="form-group">
+                  <label htmlFor="current-password">Mật khẩu hiện tại</label>
+                  <input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value);
+                      setPwError("");
+                      setPwOk("");
+                    }}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="new-password">Mật khẩu mới</label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      setPwError("");
+                      setPwOk("");
+                    }}
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="confirm-password">Xác nhận mật khẩu mới</label>
+                  <input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setPwError("");
+                      setPwOk("");
+                    }}
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+              {pwError && <p className="auth-error" role="alert">{pwError}</p>}
+              {pwOk && <p className="profile-success">{pwOk}</p>}
+              <div className="profile-form-actions">
+                <button className="profile-btn-primary" type="submit" disabled={changingPw}>
+                  {changingPw ? (
+                    <>
+                      <span className="btn-spinner" aria-hidden="true" />
+                      Đang đổi...
+                    </>
+                  ) : (
+                    "Đổi mật khẩu"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-        <form onSubmit={savePassword} className="profile-password-form">
-          <div className="profile-password-grid">
-            <div className="form-group">
-              <label htmlFor="current-password">Mật khẩu hiện tại</label>
-              <input
-                id="current-password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => {
-                  setCurrentPassword(e.target.value);
-                  setPwError("");
-                  setPwOk("");
-                }}
-                autoComplete="current-password"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="new-password">Mật khẩu mới</label>
-              <input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => {
-                  setNewPassword(e.target.value);
-                  setPwError("");
-                  setPwOk("");
-                }}
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="confirm-password">Xác nhận mật khẩu mới</label>
-              <input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  setPwError("");
-                  setPwOk("");
-                }}
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </div>
-          </div>
-          {pwError && <p className="auth-error" role="alert">{pwError}</p>}
-          {pwOk && <p className="profile-success">{pwOk}</p>}
-          <div className="profile-form-actions">
-            <button className="profile-btn-primary" type="submit" disabled={changingPw}>
-              {changingPw ? (
-                <>
-                  <span className="btn-spinner" aria-hidden="true" />
-                  Đang đổi...
-                </>
-              ) : (
-                "Đổi mật khẩu"
-              )}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
