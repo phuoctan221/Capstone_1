@@ -17,6 +17,7 @@ import json
 import os
 import random
 import re
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,7 +31,11 @@ from pymongo.errors import OperationFailure
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 load_dotenv(BASE_DIR / ".env")
+
+from app.core.domains import domain_for_topic  # noqa: E402
 
 MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "capstone1")
@@ -431,6 +436,8 @@ def publish_candidate(db: Any, candidate: dict[str, Any], *, human_reviewed: boo
     }
     document["word"] = word
     document["word_key"] = normalize_word(word)
+    document["topic"] = clean(candidate.get("topic")).lower() or "general"
+    document["domain"] = domain_for_topic(document["topic"])
     document["updated_at"] = now
     document["review_status"] = "human_approved" if human_reviewed else "auto_validated"
     document["data_source"] = candidate.get("data_source") or (

@@ -389,9 +389,3 @@
     transition: none !important;
   }
 }
-.auth-google {
-  margin-top: 12px;
-  background: white;
-  color: #17365d;
-  border: 1px solid #cdd8e8;
-}

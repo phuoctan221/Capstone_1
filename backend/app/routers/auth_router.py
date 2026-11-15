@@ -32,11 +32,16 @@ def _user_out(user: dict) -> dict:
         "id": str(user.get("_id") or user.get("email")),
         "email": user.get("email"),
         "username": user.get("username"),
+        "role": auth_service.normalize_role(user.get("role")),
         "created_at": user.get("created_at") or datetime.now(timezone.utc),
         "learning_level": user.get("learning_level"),
         "interests": user.get("interests") or [],
         "onboarded": bool(user.get("onboarded")),
         "daily_goal": user.get("daily_goal") or 10,
+        "daily_new_limit": user.get("daily_new_limit") or 10,
+        "daily_review_limit": user.get("daily_review_limit") or 30,
+        "xp": int(user.get("xp", 0) or 0),
+        "streak": int(user.get("streak", 0) or 0),
         "profile_completed_at": user.get("profile_completed_at"),
         "updated_at": user.get("updated_at"),
     }
@@ -45,7 +50,8 @@ def _user_out(user: dict) -> dict:
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register(data: UserCreate):
     db = get_database()
-    existing = await db.users.find_one({"email": data.email})
+    email = data.email.strip().lower()
+    existing = await db.users.find_one({"email": email})
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
@@ -53,35 +59,49 @@ async def register(data: UserCreate):
 
     now = datetime.now(timezone.utc)
     user_doc = {
-        "_id": data.email,
-        "email": data.email,
-        "username": data.username,
+        "_id": email,
+        "email": email,
+        "username": data.username.strip(),
         "password_hash": auth_service.hash_password(data.password),
+        "role": "user",
         "created_at": now,
         "learning_level": None,
         "interests": [],
         "onboarded": False,
         "daily_goal": 10,
+        "daily_new_limit": 10,
+        "daily_review_limit": 30,
+        "xp": 0,
+        "streak": 0,
+        "token_version": 0,
     }
     await db.users.insert_one(user_doc)
 
-    token = auth_service.create_access_token(data.email)
+    token = auth_service.create_access_token(email, 0)
     return Token(access_token=token, user=_user_out(user_doc))
 
 
 @router.post("/login", response_model=Token)
 async def login(data: UserLogin):
     db = get_database()
-    user = await db.users.find_one({"email": data.email})
-    if not user or not user.get("password_hash") or not auth_service.verify_password(
+    email = data.email.strip().lower()
+    user = await db.users.find_one({"email": email})
+    if not user or not auth_service.verify_password(
         data.password, user["password_hash"]
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
+    if user.get("is_active") is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.",
+        )
 
-    token = auth_service.create_access_token(data.email)
+    token = auth_service.create_access_token(
+        str(user["_id"]), auth_service.token_version_of(user)
+    )
     return Token(access_token=token, user=_user_out(user))
 
 
@@ -128,6 +148,10 @@ async def update_me(
         updates["interests"] = interests
     if data.daily_goal is not None:
         updates["daily_goal"] = int(data.daily_goal)
+    if data.daily_new_limit is not None:
+        updates["daily_new_limit"] = int(data.daily_new_limit)
+    if data.daily_review_limit is not None:
+        updates["daily_review_limit"] = int(data.daily_review_limit)
     if data.onboarded is not None:
         updates["onboarded"] = bool(data.onboarded)
     if not updates:
@@ -172,9 +196,18 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mật khẩu mới phải khác mật khẩu hiện tại",
         )
+    new_version = auth_service.token_version_of(user) + 1
     updates = {
         "password_hash": auth_service.hash_password(data.new_password),
+        "token_version": new_version,
         "updated_at": datetime.now(timezone.utc),
     }
     await db.users.update_one({"_id": user["id"]}, {"$set": updates})
-    return {"message": "Đổi mật khẩu thành công"}
+    # Re-issue a token for the current session so other devices are logged out
+    # while this one keeps working.
+    token = auth_service.create_access_token(user["id"], new_version)
+    return {
+        "message": "Đổi mật khẩu thành công",
+        "access_token": token,
+        "token_type": "bearer",
+    }

@@ -1,13 +1,5 @@
 import api from "./api";
 
-export async function loginWithGoogle() {
-  const { data } = await api.post("/auth/oauth/google/start");
-  sessionStorage.setItem("oauth-login", JSON.stringify({
-    provider: "google", state: data.state, browser_secret: data.browser_secret,
-  }));
-  window.location.assign(data.authorization_url);
-}
-
 export function getToken() {
   return localStorage.getItem("token");
 }
@@ -97,5 +89,10 @@ export async function completeOnboarding(payload) {
 
 export async function changePassword(payload) {
   const { data } = await api.put("/auth/password", payload);
+  const token = getToken();
+  const currentUser = getUser();
+  if (data?.access_token && token && currentUser) {
+    setSession(data.access_token, currentUser);
+  }
   return data;
 }

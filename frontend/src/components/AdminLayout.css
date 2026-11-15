@@ -1,0 +1,67 @@
+.sv-admin-shell {
+  --sv-admin-ink: #1e2544;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 262px minmax(0, 1fr);
+  background: #f4f6fc;
+}
+.sv-admin-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 18px;
+  background: linear-gradient(180deg, #191b3c 0%, #232255 55%, #2f2a70 100%);
+  color: #fff;
+  z-index: 90;
+}
+.sv-admin-sidebar-head { display: flex; align-items: center; gap: 10px; }
+.sv-admin-brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: #fff; min-width: 0; }
+.sv-admin-brand-mark { width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center; border-radius: 11px; background: #5964e8; font-size: 20px; font-weight: 800; position: relative; }
+.sv-admin-brand-mark span { position: absolute; right: 5px; top: 3px; font-size: 9px; color: #dce7ff; }
+.sv-admin-brand-name { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.045em; white-space: nowrap; }
+.sv-admin-brand-name > span { color: #aeb9ff; }
+.sv-admin-brand-name em { font-style: normal; font-size: 0.64rem; color: #8f9bff; }
+.sv-admin-role-chip { border: 1px solid #7e87ff; border-radius: 6px; padding: 4px 6px; background: #ffffff14; color: #dfe2ff; font-size: 9px; font-weight: 900; letter-spacing: 0.08em; }
+.sv-admin-menu { display: none; margin-left: auto; border: 1px solid #ffffff38; background: #ffffff12; color: #fff; border-radius: 9px; padding: 7px 11px; font-size: 18px; }
+.sv-admin-sidebar-user { display: flex; align-items: center; gap: 11px; padding: 13px; border: 1px solid #ffffff1f; border-radius: 13px; background: #ffffff0d; }
+.sv-admin-avatar { width: 37px; height: 37px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: #6f7bf0; color: #fff; font-weight: 850; }
+.sv-admin-sidebar-user strong { display: block; font-size: 0.88rem; }
+.sv-admin-sidebar-user small { display: block; margin-top: 3px; font-size: 0.7rem; color: #b7bfe7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+.sv-admin-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; overflow-y: auto; }
+.sv-admin-nav-link { display: flex; align-items: center; gap: 11px; padding: 10px 11px; border-radius: 11px; color: #c9cfef; text-decoration: none; border: 1px solid transparent; }
+.sv-admin-nav-link:hover { background: #ffffff12; color: #fff; }
+.sv-admin-nav-link.active { background: #ffffff1c; border-color: #ffffff26; color: #fff; }
+.sv-admin-nav-icon { width: 31px; height: 31px; flex-shrink: 0; display: grid; place-items: center; border-radius: 9px; background: #ffffff12; color: #cfd5ff; font-weight: 800; font-size: 0.9rem; }
+.sv-admin-nav-link.active .sv-admin-nav-icon { background: #6c78ef; color: #fff; }
+.sv-admin-nav-link b { display: block; font-size: 0.85rem; }
+.sv-admin-nav-link small { display: block; margin-top: 2px; color: #9da6d6; font-size: 0.66rem; }
+.sv-admin-nav-link.active small { color: #dfe2ff; }
+.sv-admin-sidebar-foot { border-top: 1px solid #ffffff1f; padding-top: 14px; }
+.sv-admin-sidebar-foot p { color: #9ea7d6; font-size: 0.68rem; line-height: 1.55; margin-bottom: 11px; }
+.sv-admin-logout { width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #ffffff2e; background: #ffffff10; color: #fff; border-radius: 10px; padding: 10px; font-size: 0.82rem; font-weight: 750; }
+.sv-admin-logout:hover { background: #ffffff1c; }
+.sv-admin-main { min-width: 0; }
+.sv-admin-container { max-width: 1260px; margin: 0 auto; padding: 34px 34px 60px; }
+.sv-admin-container .sv-page-heading { margin-top: 0; }
+
+@media (max-width: 980px) {
+  .sv-admin-shell { grid-template-columns: 1fr; }
+  .sv-admin-sidebar { position: sticky; height: auto; padding: 12px 16px; gap: 0; }
+  .sv-admin-sidebar-head { gap: 8px; }
+  .sv-admin-menu { display: block; }
+  .sv-admin-sidebar-user { margin-top: 12px; }
+  .sv-admin-nav { display: none; margin-top: 12px; flex: none; }
+  .sv-admin-sidebar.is-open .sv-admin-nav { display: flex; }
+  .sv-admin-sidebar.is-open .sv-admin-sidebar-user { display: flex; }
+  .sv-admin-sidebar:not(.is-open) .sv-admin-sidebar-user,
+  .sv-admin-sidebar:not(.is-open) .sv-admin-sidebar-foot { display: none; }
+  .sv-admin-sidebar-foot { margin-top: 12px; }
+  .sv-admin-container { padding: 22px 18px 48px; }
+}
+@media (max-width: 560px) {
+  .sv-admin-brand-name { display: none; }
+  .sv-admin-container { padding: 18px 13px 40px; }
+}

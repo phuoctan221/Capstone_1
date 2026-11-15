@@ -17,11 +17,16 @@ class UserOut(BaseModel):
     id: str
     email: str
     username: str
+    role: str = "user"
     created_at: datetime
     learning_level: str | None = None
     interests: list[str] = []
     onboarded: bool = False
     daily_goal: int = 10
+    daily_new_limit: int = 10
+    daily_review_limit: int = 30
+    xp: int = 0
+    streak: int = 0
     profile_completed_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -31,6 +36,8 @@ class UserProfileUpdate(BaseModel):
     learning_level: str | None = Field(None, pattern="^(A1|A2|B1|B2|C1|C2)$")
     interests: list[str] | None = None
     daily_goal: int | None = Field(None, ge=5, le=100)
+    daily_new_limit: int | None = Field(None, ge=1, le=100)
+    daily_review_limit: int | None = Field(None, ge=1, le=200)
     onboarded: bool | None = None
 
 

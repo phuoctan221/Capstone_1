@@ -1,0 +1,125 @@
+.sv-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(14, 26, 51, 0.48);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: sv-confirm-fade 0.18s ease both;
+}
+
+.sv-confirm-card {
+  width: min(92vw, 400px);
+  background: #fff;
+  border: 1px solid var(--sv-border);
+  border-radius: 18px;
+  padding: 26px 26px 22px;
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(13, 27, 62, 0.24);
+  animation: sv-confirm-pop 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+.sv-confirm-icon {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: #eef2ff;
+  color: #3d5fe9;
+  box-shadow: inset 0 0 0 1px #dfe6ff;
+}
+
+.sv-confirm-icon.danger {
+  background: #fee7e7;
+  color: #dc2626;
+  box-shadow: inset 0 0 0 1px #fbd3d3;
+}
+
+.sv-confirm-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: var(--sv-ink);
+  letter-spacing: -0.01em;
+}
+
+.sv-confirm-card p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--sv-muted);
+}
+
+.sv-confirm-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.sv-confirm-actions .sv-btn,
+.sv-confirm-submit {
+  flex: 1;
+}
+
+.sv-confirm-submit {
+  min-height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 19px;
+  font-size: 0.88rem;
+  font-weight: 750;
+  line-height: 1.1;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  color: #fff;
+  background: #3d5fe9;
+  box-shadow: 0 6px 16px rgba(61, 95, 233, 0.18);
+  transition: transform 0.14s, background 0.14s, box-shadow 0.14s;
+}
+
+.sv-confirm-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #2b4bce;
+}
+
+.sv-confirm-submit.danger {
+  background: #dc2626;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.18);
+}
+
+.sv-confirm-submit.danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.sv-confirm-submit:focus-visible,
+.sv-confirm-actions .sv-btn:focus-visible {
+  outline: 2px solid #3d5fe9;
+  outline-offset: 2px;
+}
+
+.sv-confirm-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@keyframes sv-confirm-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sv-confirm-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 480px) {
+  .sv-confirm-card { padding: 22px 18px 18px; }
+  .sv-confirm-actions { flex-direction: column-reverse; }
+}
