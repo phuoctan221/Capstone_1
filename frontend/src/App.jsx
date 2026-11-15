@@ -1,3 +1,4 @@
+import SpeakingPage from "./pages/SpeakingPage";
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar";
@@ -118,6 +119,7 @@ export default function App() {
       <Route path="/onboarding/interests" element={<OnboardingRoute><OnboardingInterestsPage /></OnboardingRoute>} />
 
       <Route element={<UserLayout />}>
+        <Route path="/speaking" element={<SpeakingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/learn" element={<LearnPage />} />
         <Route path="/progress" element={<ProgressPage />} />
