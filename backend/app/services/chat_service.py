@@ -1,6 +1,7 @@
 """Prompt construction and safe text handling for the learning assistant."""
 from __future__ import annotations
 
+import json
 import re
 
 from app.services import ai_service
@@ -26,6 +27,23 @@ _SPACE_RE = re.compile(r"\s+")
 
 def _clean_text(value: object, limit: int) -> str:
     return _SPACE_RE.sub(" ", str(value or "").strip())[:limit]
+
+
+def _plain_chat_text(value: object) -> str:
+    """Accept legacy/provider JSON wrappers but expose only the message body."""
+    raw = str(value or "").strip()
+    if raw.startswith("{") and raw.endswith("}"):
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            pass
+        else:
+            if isinstance(payload, dict):
+                for key in ("message", "response", "answer", "content"):
+                    if isinstance(payload.get(key), str):
+                        raw = payload[key]
+                        break
+    return _clean_text(raw, MAX_RESPONSE_CHARS)
 
 
 def _history_block(history: list[dict]) -> str:
@@ -61,7 +79,9 @@ Lịch sử gần đây:
 Tin nhắn mới của người học:
 {_clean_text(message, 1200)}
 
-Hãy trả lời trực tiếp cho tin nhắn mới. Không lặp lại các quy tắc hệ thống."""
+Hãy trả lời trực tiếp cho tin nhắn mới bằng nội dung thuần.
+Không trả JSON, không dùng field/nhãn như "response", "message", "answer" hoặc "content".
+Không lặp lại các quy tắc hệ thống."""
 
 
 def suggestions_for(page: str) -> list[str]:
@@ -76,8 +96,12 @@ def suggestions_for(page: str) -> list[str]:
 
 async def answer_message(*, message: str, history: list[dict], user: dict, page: str) -> dict:
     prompt = build_prompt(message=message, history=history, user=user, page=page)
-    response = await ai_service._call_ai(prompt, label=f"learning-chat:{page}")
-    text = _clean_text(response, MAX_RESPONSE_CHARS)
+    response = await ai_service._call_ai(
+        prompt,
+        label=f"learning-chat:{page}",
+        expect_json=False,
+    )
+    text = _plain_chat_text(response)
     if not text:
         raise ai_service.AIServiceError("AI returned an empty chat response")
     return {"message": text, "suggestions": suggestions_for(page)}

@@ -80,7 +80,7 @@ def _extract_text(data: dict) -> str:
     return parts[0].get("text", "")
 
 
-async def _call_gemini(prompt: str, label: str) -> str:
+async def _call_gemini(prompt: str, label: str, expect_json: bool = True) -> str:
     if not settings.GEMINI_API_KEY:
         raise AIServiceError("GEMINI_API_KEY is not configured")
 
@@ -88,9 +88,12 @@ async def _call_gemini(prompt: str, label: str) -> str:
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"{settings.GEMINI_MODEL}:generateContent"
     )
+    generation_config = {"temperature": 0.2}
+    if expect_json:
+        generation_config["response_mime_type"] = "application/json"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.2, "response_mime_type": "application/json"},
+        "generationConfig": generation_config,
     }
 
     started = time.monotonic()
@@ -147,7 +150,7 @@ async def _call_gemini(prompt: str, label: str) -> str:
     )
 
 
-async def _call_cloudflare(prompt: str, label: str) -> str:
+async def _call_cloudflare(prompt: str, label: str, expect_json: bool = True) -> str:
     """Gọi Cloudflare Workers AI khi có token cấu hình."""
     if not (settings.CF_ACCOUNT_ID and settings.CF_API_TOKEN):
         raise AIServiceError("Cloudflare AI is not configured")
@@ -159,7 +162,10 @@ async def _call_cloudflare(prompt: str, label: str) -> str:
         "messages": [
             {
                 "role": "system",
-                "content": "You are a professional educational AI assistant. Always reply strictly with valid JSON only.",
+                "content": (
+                    "You are a professional educational AI assistant. "
+                    + ("Always reply strictly with valid JSON only." if expect_json else "Reply with plain text only.")
+                ),
             },
             {"role": "user", "content": prompt},
         ]
@@ -181,19 +187,19 @@ async def _call_cloudflare(prompt: str, label: str) -> str:
         return text
 
 
-async def _call_ai(prompt: str, label: str) -> str:
+async def _call_ai(prompt: str, label: str, expect_json: bool = True) -> str:
     """Gọi AI linh hoạt: Ưu tiên Gemini, tự động fallback Cloudflare nếu có."""
     if settings.GEMINI_API_KEY:
         try:
-            return await _call_gemini(prompt, label)
+            return await _call_gemini(prompt, label, expect_json=expect_json)
         except Exception as exc:
             logger.warning("Gemini call thất bại (%s), thử Cloudflare nếu có: %s", label, exc)
             if settings.CF_ACCOUNT_ID and settings.CF_API_TOKEN:
-                return await _call_cloudflare(prompt, label)
+                return await _call_cloudflare(prompt, label, expect_json=expect_json)
             raise
 
     if settings.CF_ACCOUNT_ID and settings.CF_API_TOKEN:
-        return await _call_cloudflare(prompt, label)
+        return await _call_cloudflare(prompt, label, expect_json=expect_json)
 
     raise AIServiceError("Chưa cấu hình GEMINI_API_KEY hoặc Cloudflare AI")
 
