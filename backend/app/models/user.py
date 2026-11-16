@@ -29,6 +29,7 @@ class UserOut(BaseModel):
     streak: int = 0
     profile_completed_at: datetime | None = None
     updated_at: datetime | None = None
+    avatar_url: str | None = None
 
 
 class UserProfileUpdate(BaseModel):

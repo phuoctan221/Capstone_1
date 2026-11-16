@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchMe, updateProfile, changePassword } from "../services/authService";
+import { fetchMe, updateProfile, changePassword, uploadAvatar } from "../services/authService";
 import { fetchProgress } from "../services/lessonService";
 import { useAuth } from "../hooks/useAuth";
+import UserAvatar from "../components/UserAvatar";
 
 const LEVEL_DESC = {
   A1: "Mới bắt đầu",
@@ -54,6 +55,7 @@ export default function ProfilePage() {
   const [changingPw, setChangingPw] = useState(false);
   const [pwError, setPwError] = useState("");
   const [pwOk, setPwOk] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     setProfile(user);
@@ -178,9 +180,35 @@ export default function ProfilePage() {
     }
   };
 
+  const changeAvatar = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || uploadingAvatar) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setError("Chỉ hỗ trợ ảnh PNG, JPG hoặc WebP.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Ảnh đại diện không được lớn hơn 2 MB.");
+      return;
+    }
+    setUploadingAvatar(true);
+    setError("");
+    setOk("");
+    try {
+      const updated = await uploadAvatar(file);
+      setProfile(updated);
+      setOk("Đã cập nhật ảnh đại diện.");
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setError(typeof detail === "string" ? detail : "Không thể tải ảnh đại diện. Vui lòng thử lại.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const displayName = profile?.username || user?.username || "Người dùng";
   const email = profile?.email || user?.email || "";
-  const initial = (displayName || email || "?").charAt(0).toUpperCase();
   const level = profile?.learning_level || user?.learning_level || progress?.level;
   const interests = Array.isArray(profile?.interests) ? profile.interests : user?.interests || [];
 
@@ -188,7 +216,7 @@ export default function ProfilePage() {
     <div className="profile-page">
       <div className="profile-top">
         <div className="profile-top-left">
-          <div className="profile-avatar-large">{initial}</div>
+          <div className="profile-avatar-wrap"><UserAvatar user={profile || user} className="profile-avatar-large" alt={`Ảnh đại diện của ${displayName}`} /><label className="profile-avatar-upload">{uploadingAvatar ? "Đang tải..." : "Đổi ảnh"}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={changeAvatar} disabled={uploadingAvatar} /></label></div>
           <div className="profile-top-info">
             <h2>{displayName}</h2>
             <p className="profile-top-meta">{email}</p>
@@ -202,10 +230,11 @@ export default function ProfilePage() {
           <span className="profile-stat-label">Level</span>
           <span className="profile-stat-value">{level ? `${level}` : "—"}</span>
         </div>
-        <div className="profile-stat-card">
-          <span className="profile-stat-label">XP</span>
+        <button className="profile-stat-card profile-progress-link" type="button" onClick={() => navigate("/progress")}>
+          <span className="profile-stat-label">Tiến độ</span>
           <span className="profile-stat-value">{progress?.xp ?? 0}</span>
-        </div>
+          <span className="profile-progress-hint">Xem chi tiết →</span>
+        </button>
         <div className="profile-stat-card">
           <span className="profile-stat-label">Streak</span>
           <span className="profile-stat-value">{progress?.streak ?? 0} 🔥</span>

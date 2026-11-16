@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -36,6 +37,14 @@ class Settings(BaseSettings):
     CF_RPM: int = 30
 
     DICTIONARY_RPM: int = 30
+
+    SPEECHACE_API_KEY: str = ""
+    SPEECHACE_URL: str = "https://api.speechace.co/api/scoring/text/v9/json"
+    SPEECHACE_DIALECT: str = "en-us"
+    PRONUNCIATION_PROVIDER: Literal["speechace", "chivox"] = "speechace"
+    CHIVOX_API_KEY: str = ""
+    FFMPEG_PATH: str = "ffmpeg"
+    AVATAR_MAX_BYTES: int = 2 * 1024 * 1024
 
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",

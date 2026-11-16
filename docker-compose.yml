@@ -6,6 +6,8 @@ x-backend: &backend-base
     dockerfile: Dockerfile
   env_file:
     - ./backend/.env
+  volumes:
+    - ./backend/uploads:/app/uploads
   expose:
     - "8000"
   networks:

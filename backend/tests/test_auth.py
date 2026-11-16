@@ -1,5 +1,11 @@
 from tests.support import ApiTestCase
 
+PNG_1X1 = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0dIDAT\x08\xd7c\xf8\xff\xff?\x00\x05\xfe\x02\xfe"
+    b"\xdc\xccY\xe7\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
 
 class AuthTests(ApiTestCase):
     async def test_register_login_and_me(self):
@@ -80,3 +86,27 @@ class AuthTests(ApiTestCase):
         self.assertEqual(body["learning_level"], "A2")
         self.assertTrue(body["onboarded"])
         self.assertIsNotNone(body["profile_completed_at"])
+
+    async def test_user_can_upload_png_avatar(self):
+        headers = await self.auth_headers()
+        response = await self.client.post(
+            "/auth/me/avatar",
+            files={"avatar": ("profile.png", PNG_1X1, "image/png")},
+            headers=headers,
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        avatar_url = response.json()["avatar_url"]
+        self.assertRegex(avatar_url, r"^/api/uploads/avatars/[a-f0-9]{32}\.png$")
+
+        image = await self.client.get(avatar_url.removeprefix("/api"))
+        self.assertEqual(image.status_code, 200)
+        self.assertEqual(image.headers["content-type"], "image/png")
+
+    async def test_avatar_rejects_non_image_upload(self):
+        headers = await self.auth_headers()
+        response = await self.client.post(
+            "/auth/me/avatar",
+            files={"avatar": ("not-an-image.txt", b"not an image", "text/plain")},
+            headers=headers,
+        )
+        self.assertEqual(response.status_code, 415, response.text)

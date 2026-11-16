@@ -22,6 +22,7 @@ from app.models.admin import (
 from app.models.lesson import LessonCreate, LessonUpdate
 from app.models.vocabulary import VocabularyCreate, VocabularyUpdate
 from app.services import (
+    avatar_service,
     domain_service,
     exercise_service,
     lesson_service,
@@ -189,6 +190,22 @@ async def admin_stats():
             "active": exercises_active,
             "by_skill": exercises_by_skill,
             "by_domain": exercises_by_domain,
+        },
+        "services": {
+            "gemini": {
+                "configured": bool(settings.GEMINI_API_KEY),
+                "model": settings.GEMINI_MODEL,
+            },
+            "pronunciation": {
+                "provider": settings.PRONUNCIATION_PROVIDER,
+                "ready": bool(
+                    settings.SPEECHACE_API_KEY
+                    if settings.PRONUNCIATION_PROVIDER == "speechace"
+                    else settings.CHIVOX_API_KEY
+                ),
+                "speechace_configured": bool(settings.SPEECHACE_API_KEY),
+                "chivox_configured": bool(settings.CHIVOX_API_KEY),
+            },
         },
     }
 
@@ -843,6 +860,11 @@ async def admin_delete_user(
         deleted[collection] = result.deleted_count
     result = await db.users.delete_one({"_id": user_id})
     deleted["users"] = result.deleted_count
+    try:
+        avatar_service.delete_avatar(user.get("avatar_url"))
+    except OSError:
+        # Account deletion must not fail only because its local avatar was gone.
+        pass
     return {"id": user_id, "deleted": deleted}
 
 

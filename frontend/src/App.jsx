@@ -1,6 +1,8 @@
+import SpeakingPage from "./pages/SpeakingPage";
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import ChatWidget from "./components/ChatWidget";
 import AdminLayout from "./components/AdminLayout";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -62,6 +64,7 @@ function UserLayout() {
       <main className="container sv-app-main">
         <Outlet />
       </main>
+      <ChatWidget />
     </>
   );
 }
@@ -118,6 +121,7 @@ export default function App() {
       <Route path="/onboarding/interests" element={<OnboardingRoute><OnboardingInterestsPage /></OnboardingRoute>} />
 
       <Route element={<UserLayout />}>
+        <Route path="/speaking" element={<SpeakingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/learn" element={<LearnPage />} />
         <Route path="/progress" element={<ProgressPage />} />

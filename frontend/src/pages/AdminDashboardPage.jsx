@@ -61,6 +61,8 @@ export default function AdminDashboardPage() {
   const exerciseTotal = Number(stats.exercises?.total) || 0;
   const domainMax = Math.max(1, ...DOMAINS.map((domain) => Number(vocabByDomain[domain.id]) || 0));
   const skillMax = Math.max(1, ...SKILLS.map((skill) => Number(exercisesBySkill[skill.id]) || 0));
+  const gemini = stats.services?.gemini || {};
+  const pronunciation = stats.services?.pronunciation || {};
 
   return (
     <div className="sv-page sv-admin-page sv-admin-home">
@@ -94,6 +96,21 @@ export default function AdminDashboardPage() {
           </article>
         ))}
       </div>
+
+      <section className="sv-panel sv-admin-services">
+        <PanelHead kicker="TÌNH TRẠNG DỊCH VỤ" title="AI và luyện nói" icon="✦" tone="green" />
+        <div className="sv-admin-service-grid">
+          <div className={`sv-admin-service-card ${gemini.configured ? "ready" : "warning"}`}>
+            <div><span>Gemini AI</span><b>{gemini.configured ? "Sẵn sàng" : "Chưa cấu hình"}</b></div>
+            <small>{gemini.configured ? `Model: ${gemini.model || "đã cấu hình"}` : "Thêm GEMINI_API_KEY trong backend/.env để bật các tính năng AI."}</small>
+          </div>
+          <div className={`sv-admin-service-card ${pronunciation.ready ? "ready" : "warning"}`}>
+            <div><span>Luyện nói</span><b>{pronunciation.ready ? "Sẵn sàng" : "Chưa sẵn sàng"}</b></div>
+            <small>{pronunciation.ready ? `Provider: ${pronunciation.provider}` : `Provider đang chọn: ${pronunciation.provider || "speechace"}. Cần cấu hình API key tương ứng trong backend/.env.`}</small>
+          </div>
+        </div>
+        {!pronunciation.ready && <p className="sv-admin-service-note">Trạng thái chỉ cho biết dịch vụ đã được cấu hình hay chưa; API key không được hiển thị trong trang quản trị.</p>}
+      </section>
 
       <div className="sv-admin-breakdown">
         <section className="sv-panel">

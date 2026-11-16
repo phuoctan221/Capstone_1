@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createAdminVocabulary, deleteAdminVocabulary, fetchAdminVocabularies, updateAdminVocabulary } from "../services/adminService";
 import { generateWithAI } from "../services/vocabularyService";
 import { DOMAINS, formatApiError } from "../constants/domains";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { PageError, PageLoading } from "../components/PageState";
 
 const PAGE_SIZE = 50;
@@ -28,6 +29,7 @@ export default function AdminPage() {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -149,7 +151,6 @@ export default function AdminPage() {
   }
 
   async function remove(word) {
-    if (!window.confirm(`Xóa từ “${word.word}”? Thao tác này thay đổi dữ liệu dùng chung.`)) return;
     setBusyId(word.id);
     setError("");
     setNotice("");
@@ -161,6 +162,7 @@ export default function AdminPage() {
       setError(formatApiError(err, "Không thể xóa từ vựng."));
     } finally {
       setBusyId(null);
+      setConfirmDelete(null);
     }
   }
 
@@ -266,7 +268,7 @@ export default function AdminPage() {
                     <td><span className="sv-admin-badge">{DOMAINS.find((item) => item.id === (word.domain || word.topic))?.label || word.domain || word.topic}</span></td>
                     <td><span className="sv-admin-badge">{word.level}</span></td>
                     <td className="sv-admin-muted">{word.example || "—"}</td>
-                    <td><div className="sv-admin-actions"><button type="button" className="sv-edit-link" onClick={() => startEdit(word)}>Sửa</button><button type="button" className="sv-danger-link" disabled={busyId === word.id} onClick={() => remove(word)}>{busyId === word.id ? "Đang xóa..." : "Xóa"}</button></div></td>
+                    <td><div className="sv-admin-actions"><button type="button" className="sv-edit-link" onClick={() => startEdit(word)}>Sửa</button><button type="button" className="sv-danger-link" disabled={busyId === word.id} onClick={() => setConfirmDelete(word)}>{busyId === word.id ? "Đang xóa..." : "Xóa"}</button></div></td>
                   </tr>
                 )) : <tr><td colSpan={6} className="sv-admin-empty-cell"><strong>Không tìm thấy từ vựng</strong>Thử đổi bộ lọc hoặc thêm từ mới ở biểu mẫu phía trên.</td></tr>}
               </tbody>
@@ -275,6 +277,16 @@ export default function AdminPage() {
           {pages > 1 && <div className="sv-admin-pagination"><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1}>← Trước</button><span>Trang {page} / {pages}</span><button type="button" onClick={() => setPage((value) => Math.min(pages, value + 1))} disabled={page >= pages}>Sau →</button></div>}
         </>
       )}
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title="Xóa từ vựng?"
+        message={confirmDelete ? `Xóa “${confirmDelete.word}” sẽ đồng thời xóa các câu hỏi, trạng thái học, dữ liệu ôn tập legacy và quiz tạm liên quan. Thao tác này không thể hoàn tác.` : ""}
+        confirmText="Xóa từ vựng"
+        danger
+        busy={busyId !== null}
+        onConfirm={() => confirmDelete && remove(confirmDelete)}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }
