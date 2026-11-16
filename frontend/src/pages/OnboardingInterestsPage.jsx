@@ -3,13 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { completeOnboarding } from "../services/authService";
 
 const INTERESTS = [
-  { value: "technology", label: "Công nghệ thông tin" },
-  { value: "business", label: "Kinh doanh" },
-  { value: "travel", label: "Du lịch" },
-  { value: "science", label: "Khoa học" },
-  { value: "academic", label: "Tiếng Anh học thuật" },
-  { value: "daily-life", label: "Giao tiếp hằng ngày" },
-  { value: "general", label: "Tổng quát" },
+  { value: "general", label: "General English" },
+  { value: "technology", label: "IT & Technology" },
+  { value: "business", label: "Business English" },
 ];
 
 export default function OnboardingInterestsPage() {
@@ -40,7 +36,7 @@ export default function OnboardingInterestsPage() {
     try {
       await completeOnboarding({ learning_level: level, interests: selected });
       sessionStorage.removeItem("onb_level");
-      navigate("/learn");
+      navigate("/dashboard");
     } catch (err) {
       const detail = err.response?.data?.detail;
       setError(typeof detail === "string" ? detail : "Không thể lưu hồ sơ. Vui lòng thử lại.");

@@ -89,5 +89,10 @@ export async function completeOnboarding(payload) {
 
 export async function changePassword(payload) {
   const { data } = await api.put("/auth/password", payload);
+  const token = getToken();
+  const currentUser = getUser();
+  if (data?.access_token && token && currentUser) {
+    setSession(data.access_token, currentUser);
+  }
   return data;
 }

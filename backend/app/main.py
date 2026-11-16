@@ -13,6 +13,8 @@ from app.routers import (
     learning_router,
     lesson_router,
     progress_router,
+    domain_router,
+    admin_router,
 )
 
 logger = logging.getLogger("uvicorn.error")
@@ -25,6 +27,9 @@ async def lifespan(app: FastAPI):
         try:
             await connect_to_mongo()
             logger.info("MongoDB connected -> %s", settings.mongo_target)
+            from app.services.domain_service import ensure_domains
+
+            await ensure_domains()
             break
         except Exception as e:
             if is_auth_error(e):
@@ -64,9 +69,12 @@ app.add_middleware(
 
 app.include_router(auth_router.router)
 app.include_router(vocabulary_router.router)
+app.include_router(vocabulary_router.alias_router)
+app.include_router(domain_router.router)
 app.include_router(learning_router.router)
 app.include_router(lesson_router.router)
 app.include_router(progress_router.router)
+app.include_router(admin_router.router)
 
 
 @app.get("/health", tags=["health"])

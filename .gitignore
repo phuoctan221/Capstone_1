@@ -34,3 +34,9 @@ backups/
 mongodump/
 *.dump
 mongo-keyfile
+
+# Bulk vocabulary import caches
+backend/data/flashcard_vocab.json
+backend/data/tatoeba_eng_sentences.tsv.bz2
+backend/data/*.part
+backend/data/enrichment_backup_*.json

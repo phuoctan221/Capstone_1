@@ -13,45 +13,86 @@ from app.models.vocabulary import (
     AIBatchItem,
 )
 from app.services import vocabulary_service, ai_service
-from app.services.auth_service import get_current_user
+from app.services.auth_service import get_current_user, require_admin
 
 logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter(prefix="/vocabulary", tags=["vocabulary"])
+alias_router = APIRouter(prefix="/vocabularies", tags=["vocabulary"])
 
 
-@router.get("")
-async def list_vocabularies(
-    topic: str | None = None,
-    level: str | None = None,
-    search: str | None = Query(None, max_length=100),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    _: dict = Depends(get_current_user),
+async def _list(
+    topic: str | None,
+    level: str | None,
+    search: str | None,
+    page: int,
+    page_size: int,
+    domain: str | None,
+    _: dict,
 ):
     return await vocabulary_service.list_vocabularies(
-        topic=topic, level=level, search=search, page=page, page_size=page_size
+        topic=topic,
+        level=level,
+        search=search,
+        page=page,
+        page_size=page_size,
+        domain=domain,
     )
 
 
-@router.get("/{vocab_id}", response_model=VocabularyOut)
-async def get_vocabulary(vocab_id: str, _: dict = Depends(get_current_user)):
+async def _get(vocab_id: str, _: dict):
     vocab = await vocabulary_service.get_vocabulary(vocab_id)
     if not vocab:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return vocab
 
 
+@router.get("")
+async def list_vocabularies(
+    topic: str | None = None,
+    domain: str | None = None,
+    level: str | None = None,
+    search: str | None = Query(None, max_length=100),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    user: dict = Depends(get_current_user),
+):
+    return await _list(topic, level, search, page, page_size, domain, user)
+
+
+@alias_router.get("")
+async def list_vocabularies_alias(
+    topic: str | None = None,
+    domain: str | None = None,
+    level: str | None = None,
+    search: str | None = Query(None, max_length=100),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    user: dict = Depends(get_current_user),
+):
+    return await _list(topic, level, search, page, page_size, domain, user)
+
+
+@router.get("/{vocab_id}", response_model=VocabularyOut)
+async def get_vocabulary(vocab_id: str, user: dict = Depends(get_current_user)):
+    return await _get(vocab_id, user)
+
+
+@alias_router.get("/{vocab_id}", response_model=VocabularyOut)
+async def get_vocabulary_alias(vocab_id: str, user: dict = Depends(get_current_user)):
+    return await _get(vocab_id, user)
+
+
 @router.post("", response_model=VocabularyOut, status_code=status.HTTP_201_CREATED)
 async def create_vocabulary(
-    data: VocabularyCreate, _: dict = Depends(get_current_user)
+    data: VocabularyCreate, _: dict = Depends(require_admin)
 ):
     return await vocabulary_service.create_vocabulary(data)
 
 
 @router.put("/{vocab_id}", response_model=VocabularyOut)
 async def update_vocabulary(
-    vocab_id: str, data: VocabularyUpdate, _: dict = Depends(get_current_user)
+    vocab_id: str, data: VocabularyUpdate, _: dict = Depends(require_admin)
 ):
     vocab = await vocabulary_service.update_vocabulary(vocab_id, data)
     if not vocab:
@@ -60,7 +101,7 @@ async def update_vocabulary(
 
 
 @router.delete("/{vocab_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_vocabulary(vocab_id: str, _: dict = Depends(get_current_user)):
+async def delete_vocabulary(vocab_id: str, _: dict = Depends(require_admin)):
     deleted = await vocabulary_service.delete_vocabulary(vocab_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -82,12 +123,8 @@ async def ai_generate(data: AIGenerateRequest, _: dict = Depends(get_current_use
 
 
 @router.post("/ai-generate-batch", response_model=AIBatchResponse)
-async def ai_generate_batch(data: AIBatchRequest, _: dict = Depends(get_current_user)):
-    """Sinh chi tiet cho nhieu tu.
-
-    - Neu `words` rong: AI goi y danh sach tu theo topic/level truoc.
-    - Cac tu duoc xu ly song song (nhom toi da 4 luoi) vi Gemini free tier rat cham.
-    """
+async def ai_generate_batch(data: AIBatchRequest, _: dict = Depends(require_admin)):
+    """Generate and optionally save shared vocabulary (admin only)."""
     words = [w.strip() for w in data.words if w and w.strip()]
     from_user = bool(words)
 

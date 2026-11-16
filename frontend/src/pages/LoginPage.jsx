@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { login } from "../services/authService";
+import { login, fetchMe } from "../services/authService";
+import { isAdmin } from "../constants/domains";
 import "./LoginPage.css";
 
 const DEMO_ACCOUNTS = [
-  { label: "Demo User", email: "demo@smartvocab.com", password: "demo1234" },
-  { label: "Test Student", email: "test@smartvocab.com", password: "test1234" },
+  { label: "Demo Admin", email: "admin@smartvocab.com", password: "admin123" },
+  { label: "Demo User", email: "user@smartvocab.com", password: "user123" },
 ];
 
 export default function LoginPage() {
@@ -34,11 +35,14 @@ export default function LoginPage() {
     setError("");
     try {
       const res = await login(form.email.trim(), form.password);
-      const user = res?.user;
-      if (user && user.onboarded === false) {
+      // Refresh the account role before deciding between Admin and User.
+      const user = await fetchMe().catch(() => res?.user);
+      if (isAdmin(user)) {
+        navigate("/admin", { replace: true });
+      } else if (user && user.onboarded === false) {
         navigate("/onboarding/level");
       } else {
-        navigate("/learn");
+        navigate("/dashboard");
       }
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -136,16 +140,15 @@ export default function LoginPage() {
               <div className="auth-demo" key={account.email}>
                 <div>
                   <strong>{account.label}</strong>
-                  <small>{account.email}</small>
+                  <small>
+                    {account.email} / {account.password}
+                  </small>
                 </div>
                 <button
                   type="button"
                   disabled={loading}
                   onClick={() => {
-                    setForm({
-                      email: account.email,
-                      password: account.password,
-                    });
+                    setForm({ email: account.email, password: account.password });
                     setError("");
                   }}
                 >

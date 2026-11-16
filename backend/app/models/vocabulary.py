@@ -10,7 +10,9 @@ class VocabularyBase(BaseModel):
     example: str = ""
     synonyms: list[str] = []
     antonyms: list[str] = []
+    # Legacy topic is retained; `domain` is the canonical MVP grouping.
     topic: str = "general"
+    domain: str = Field("general", pattern="^(general|technology|business)$")
     level: str = Field("A1", pattern="^(A1|A2|B1|B2|C1|C2)$")
 
 
@@ -27,6 +29,7 @@ class VocabularyUpdate(BaseModel):
     synonyms: list[str] | None = None
     antonyms: list[str] | None = None
     topic: str | None = None
+    domain: str | None = Field(None, pattern="^(general|technology|business)$")
     level: str | None = None
 
 
