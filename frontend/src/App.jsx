@@ -1,4 +1,5 @@
 import SpeakingPage from "./pages/SpeakingPage";
+import StoryGamePage from "./pages/StoryGamePage";
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar";
@@ -122,6 +123,8 @@ export default function App() {
 
       <Route element={<UserLayout />}>
         <Route path="/speaking" element={<SpeakingPage />} />
+        <Route path="/games" element={<Navigate to="/games/story" replace />} />
+        <Route path="/games/story" element={<StoryGamePage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/learn" element={<LearnPage />} />
         <Route path="/progress" element={<ProgressPage />} />

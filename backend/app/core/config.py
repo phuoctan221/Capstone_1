@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.8-flash"
     GEMINI_RPM: int = 10
+    MISTRAL_API_KEY: str = ""
+    MISTRAL_MODEL: str = "mistral-small-latest"
 
     CF_ACCOUNT_ID: str = ""
     CF_API_TOKEN: str = ""

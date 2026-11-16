@@ -46,6 +46,7 @@ export default function Navbar() {
           <NavLink to="/learn" className={linkClass}>Lộ trình học</NavLink>
           <NavLink to="/flashcards" className={linkClass}>Ôn tập FSRS</NavLink>
           <NavLink to="/speaking" className={linkClass}>Luyện nói</NavLink>
+          <NavLink to="/games" className={linkClass}>Game</NavLink>
           <NavLink to="/vocabulary" className={linkClass}>Từ vựng</NavLink>
         </nav>
         <div className="sv-navbar-right">
