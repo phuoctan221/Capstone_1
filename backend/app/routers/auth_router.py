@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from app.models.user import (
     UserCreate,
@@ -11,7 +11,7 @@ from app.models.user import (
     UserProfileUpdate,
     ChangePasswordRequest,
 )
-from app.services import auth_service
+from app.services import auth_service, avatar_service
 from app.db.mongodb import get_database
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -44,6 +44,7 @@ def _user_out(user: dict) -> dict:
         "streak": int(user.get("streak", 0) or 0),
         "profile_completed_at": user.get("profile_completed_at"),
         "updated_at": user.get("updated_at"),
+        "avatar_url": user.get("avatar_url"),
     }
 
 
@@ -159,6 +160,22 @@ async def update_me(
     updates["updated_at"] = datetime.now(timezone.utc)
     await db.users.update_one({"_id": user["id"]}, {"$set": updates})
     updated = await db.users.find_one({"_id": user["id"]})
+    return _user_out(updated)
+
+
+@router.post("/me/avatar", response_model=UserOut)
+async def upload_avatar(
+    avatar: UploadFile = File(...),
+    user: dict = Depends(auth_service.get_current_user),
+):
+    avatar_url = await avatar_service.save_avatar(avatar)
+    old_avatar_url = user.get("avatar_url")
+    await get_database().users.update_one(
+        {"_id": user["id"]},
+        {"$set": {"avatar_url": avatar_url, "updated_at": datetime.now(timezone.utc)}},
+    )
+    avatar_service.delete_avatar(old_avatar_url)
+    updated = await get_database().users.find_one({"_id": user["id"]})
     return _user_out(updated)
 
 

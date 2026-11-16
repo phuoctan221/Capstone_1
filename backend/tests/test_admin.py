@@ -1,3 +1,7 @@
+from unittest.mock import patch
+
+from app.routers import admin_router
+from app.db import mongodb
 from tests.support import ApiTestCase
 
 
@@ -20,6 +24,32 @@ class AdminTests(ApiTestCase):
         response = await self.client.get("/admin/vocabularies", headers=headers)
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.json()["total"], 10)
+
+    async def test_stats_exposes_safe_service_readiness_only(self):
+        headers = await self.make_admin()
+        response = await self.client.get("/admin/stats", headers=headers)
+        self.assertEqual(response.status_code, 200, response.text)
+        services = response.json()["services"]
+        self.assertIn("configured", services["gemini"])
+        self.assertIn("model", services["gemini"])
+        self.assertIn("provider", services["pronunciation"])
+        self.assertIn("ready", services["pronunciation"])
+        self.assertNotIn("api_key", str(services).lower())
+
+    async def test_deleting_user_cleans_its_local_avatar(self):
+        headers = await self.make_admin("admin@example.com")
+        user_email = "avatar-owner@example.com"
+        await self.register(user_email)
+        avatar_url = "/api/uploads/avatars/avatar.png"
+        await mongodb.get_database().users.update_one(
+            {"_id": user_email}, {"$set": {"avatar_url": avatar_url}}
+        )
+
+        with patch.object(admin_router.avatar_service, "delete_avatar") as delete_avatar:
+            response = await self.client.delete(f"/admin/users/{user_email}", headers=headers)
+
+        self.assertEqual(response.status_code, 200, response.text)
+        delete_avatar.assert_called_once_with(avatar_url)
 
     async def test_lesson_crud_and_exercise_regeneration(self):
         headers = await self.make_admin()

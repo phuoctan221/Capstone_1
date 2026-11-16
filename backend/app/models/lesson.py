@@ -127,4 +127,4 @@ class MistakeAnalysisOut(BaseModel):
 
 
 class BatchMistakeAnalysisRequest(BaseModel):
-    mistakes: list[MistakeAnalysisRequest]
+    mistakes: list[MistakeAnalysisRequest] = Field(min_length=1, max_length=20)

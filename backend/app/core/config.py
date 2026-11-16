@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     PRONUNCIATION_PROVIDER: Literal["speechace", "chivox"] = "speechace"
     CHIVOX_API_KEY: str = ""
     FFMPEG_PATH: str = "ffmpeg"
+    AVATAR_MAX_BYTES: int = 2 * 1024 * 1024
 
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",

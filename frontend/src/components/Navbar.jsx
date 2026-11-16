@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { clearSession } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
 import ConfirmDialog from "./ConfirmDialog";
+import UserAvatar from "./UserAvatar";
 
 const linkClass = ({ isActive }) => `sv-nav-link${isActive ? " active" : ""}`;
 
@@ -44,13 +45,12 @@ export default function Navbar() {
           <NavLink to="/dashboard" className={linkClass}>Tổng quan</NavLink>
           <NavLink to="/learn" className={linkClass}>Lộ trình học</NavLink>
           <NavLink to="/flashcards" className={linkClass}>Ôn tập FSRS</NavLink>
-          <NavLink to="/progress" className={linkClass}>Tiến độ</NavLink>
           <NavLink to="/speaking" className={linkClass}>Luyện nói</NavLink>
           <NavLink to="/vocabulary" className={linkClass}>Từ vựng</NavLink>
         </nav>
         <div className="sv-navbar-right">
           <Link className="sv-user-chip" to="/profile" title={user?.email || "Hồ sơ"}>
-            <span>{String(user?.username || user?.email || "?").charAt(0).toUpperCase()}</span>
+            <UserAvatar user={user} />
             <b>{user?.username || "Tài khoản"}</b>
           </Link>
           <button type="button" className="sv-logout" onClick={() => setAskLogout(true)} title="Đăng xuất" aria-label="Đăng xuất">↪</button>

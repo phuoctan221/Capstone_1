@@ -5,8 +5,9 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from app.core.config import settings
+from app.core.config import BASE_DIR, settings
 from app.db.mongodb import connect_to_mongo, close_mongo_connection, is_auth_error
 from app.routers import (
     auth_router,
@@ -16,6 +17,7 @@ from app.routers import (
     progress_router,
     domain_router,
     admin_router,
+    chat_router,
 )
 
 logger = logging.getLogger("uvicorn.error")
@@ -68,6 +70,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+uploads_dir = BASE_DIR / "uploads"
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+
 app.include_router(speaking_router.router)
 app.include_router(auth_router.router)
 app.include_router(vocabulary_router.router)
@@ -77,6 +83,7 @@ app.include_router(learning_router.router)
 app.include_router(lesson_router.router)
 app.include_router(progress_router.router)
 app.include_router(admin_router.router)
+app.include_router(chat_router.router)
 
 
 @app.get("/health", tags=["health"])

@@ -289,6 +289,18 @@
   margin-left: 5px;
 }
 
+/* ---------- Service readiness ---------- */
+.sv-admin-services { margin: 18px 0 0; }
+.sv-admin-service-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.sv-admin-service-card { border: 1px solid #e5ebf5; border-radius: 13px; padding: 14px 15px; background: #fbfcff; }
+.sv-admin-service-card > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sv-admin-service-card span { color: #596a85; font-size: .8rem; font-weight: 750; }
+.sv-admin-service-card b { font-size: .82rem; }
+.sv-admin-service-card small { display: block; margin-top: 8px; color: #8491a4; font-size: .74rem; line-height: 1.45; }
+.sv-admin-service-card.ready { border-color: #bfe7d4; background: #f5fcf8; }.sv-admin-service-card.ready b { color: #16805a; }
+.sv-admin-service-card.warning { border-color: #f1d8a8; background: #fffaf1; }.sv-admin-service-card.warning b { color: #a26511; }
+.sv-admin-service-note { margin: 12px 0 0; color: #8290a4; font-size: .75rem; line-height: 1.45; }
+
 /* ---------- Action cards ---------- */
 .sv-admin-home .sv-admin-action-grid {
   gap: 16px;
@@ -355,4 +367,5 @@
   .sv-admin-hero { padding: 25px; }
   .sv-admin-role-chip { font-size: 9px; }
   .sv-admin-home .sv-admin-bar-row { grid-template-columns: 92px minmax(0, 1fr) 58px; }
+  .sv-admin-service-grid { grid-template-columns: 1fr; }
 }

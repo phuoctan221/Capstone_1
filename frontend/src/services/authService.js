@@ -75,6 +75,20 @@ export async function updateProfile(payload) {
   return data;
 }
 
+export async function uploadAvatar(file) {
+  const body = new FormData();
+  body.append("avatar", file);
+  const { data } = await api.post("/auth/me/avatar", body);
+  const token = getToken();
+  if (token) {
+    setSession(token, data);
+  } else {
+    localStorage.setItem("user", JSON.stringify(data));
+    emitAuthChange();
+  }
+  return data;
+}
+
 export async function completeOnboarding(payload) {
   const { data } = await api.post("/auth/onboarding", payload);
   const token = getToken();

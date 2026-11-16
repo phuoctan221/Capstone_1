@@ -44,6 +44,17 @@ async def build_quiz(
         records.append({
             "question_id": question_id, "user_id": user_id, "lesson_id": lesson_id,
             "vocabulary_id": w["id"], "skill": "meaning" if qtype == "meaning" else "spelling",
+            # Keep the exact quiz snapshot server-side. The response returned to the
+            # learner deliberately excludes correct_answer.
+            "question": question,
+            "options": options,
+            "correct_answer": correct,
+            "word": w.get("word", ""),
+            "phonetic": w.get("phonetic", ""),
+            "meaning": w.get("meaning", ""),
+            "example": w.get("example", ""),
+            "part_of_speech": w.get("part_of_speech", ""),
+            "level": w.get("level", "A1"),
             "expires_at": datetime.now(timezone.utc) + timedelta(hours=2),
         })
         questions.append(

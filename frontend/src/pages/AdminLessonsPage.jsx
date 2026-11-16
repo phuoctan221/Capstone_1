@@ -8,6 +8,7 @@ import {
 } from "../services/adminService";
 import { DOMAINS, formatApiError } from "../constants/domains";
 import { EmptyState, PageError, PageLoading } from "../components/PageState";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 const EMPTY_FORM = { domain: "general", level: "A1", title: "", description: "", order: 0 };
@@ -29,6 +30,7 @@ export default function AdminLessonsPage() {
   const [wordsLoading, setWordsLoading] = useState(false);
   const [wordsError, setWordsError] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,7 +114,6 @@ export default function AdminLessonsPage() {
   }
 
   async function remove(lesson) {
-    if (!window.confirm(`Xóa bài học ${lesson.id}? Chỉ xóa được khi bài học không còn từ vựng.`)) return;
     setBusyId(lesson.id);
     setError("");
     setNotice("");
@@ -128,6 +129,7 @@ export default function AdminLessonsPage() {
       setError(formatApiError(err, "Không thể xóa bài học."));
     } finally {
       setBusyId(null);
+      setConfirmDelete(null);
     }
   }
 
@@ -220,7 +222,7 @@ export default function AdminLessonsPage() {
                   <td><span className="sv-admin-badge">{lesson.level}</span></td>
                   <td><span className="sv-admin-strong">{lesson.word_count}</span> <small className="sv-admin-muted">từ</small></td>
                   <td><span className="sv-admin-strong">{lesson.exercise_count}</span> <small className="sv-admin-muted">câu</small></td>
-                  <td><div className="sv-admin-actions"><button type="button" className="sv-edit-link" onClick={() => showWords(lesson)}>Từ vựng</button><button type="button" className="sv-edit-link" onClick={() => startEdit(lesson)}>Sửa</button><button type="button" className="sv-danger-link" onClick={() => remove(lesson)} disabled={busyId === lesson.id}>{busyId === lesson.id ? "Đang xóa..." : "Xóa"}</button></div></td>
+                  <td><div className="sv-admin-actions"><button type="button" className="sv-edit-link" onClick={() => showWords(lesson)}>Từ vựng</button><button type="button" className="sv-edit-link" onClick={() => startEdit(lesson)}>Sửa</button><button type="button" className="sv-danger-link" onClick={() => setConfirmDelete(lesson)} disabled={busyId === lesson.id}>{busyId === lesson.id ? "Đang xóa..." : "Xóa"}</button></div></td>
                 </tr>
               ))}
             </tbody>
@@ -242,6 +244,16 @@ export default function AdminLessonsPage() {
           ) : <div className="sv-admin-empty-cell"><strong>Bài học chưa có từ vựng</strong>Thêm từ vựng cùng lĩnh vực và cấp độ trong mục Quản lý từ vựng.</div>}
         </section>
       )}
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title="Xóa bài học?"
+        message={confirmDelete ? `Xóa ${confirmDelete.id} chỉ xóa tiêu đề và mô tả bài học. Từ vựng, câu hỏi và dữ liệu học không bị xóa; hệ thống sẽ chặn thao tác nếu bài còn từ vựng.` : ""}
+        confirmText="Xóa bài học"
+        danger
+        busy={busyId !== null}
+        onConfirm={() => confirmDelete && remove(confirmDelete)}
+        onCancel={() => setConfirmDelete(null)}
+      />
       <p className="sv-admin-footnote">Lưu ý: xóa bài học chỉ xóa tiêu đề/mô tả. Muốn xóa một bài có từ vựng, hãy chuyển hoặc xóa từ vựng trước để tránh mất dữ liệu học tập.</p>
     </div>
   );

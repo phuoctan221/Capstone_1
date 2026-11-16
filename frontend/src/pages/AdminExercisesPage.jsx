@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  createAdminExercise,
   deleteAdminExercise,
   fetchAdminExercises,
+  fetchAdminLessonWords,
   fetchAdminLessons,
   regenerateAdminExercises,
   updateAdminExercise,
 } from "../services/adminService";
 import { DOMAINS, SKILLS, formatApiError } from "../constants/domains";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { PageError, PageLoading } from "../components/PageState";
 
 const PAGE_SIZE = 50;
@@ -31,6 +34,13 @@ export default function AdminExercisesPage() {
   const [notice, setNotice] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [createLesson, setCreateLesson] = useState("");
+  const [createWords, setCreateWords] = useState([]);
+  const [wordsLoading, setWordsLoading] = useState(false);
+  const [createSkill, setCreateSkill] = useState("meaning");
+  const [createVocabularyId, setCreateVocabularyId] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -75,6 +85,7 @@ export default function AdminExercisesPage() {
         const options = (Array.isArray(data) ? data : []).filter((lesson) => lesson.word_count > 0);
         setLessonOptions(options);
         setRegenLesson((current) => current || (options.find((lesson) => lesson.id === "general-a1")?.id || options[0]?.id || ""));
+        setCreateLesson((current) => current || (options.find((lesson) => lesson.id === "general-a1")?.id || options[0]?.id || ""));
       })
       .catch(() => {});
     return () => { alive = false; };
@@ -86,6 +97,7 @@ export default function AdminExercisesPage() {
   };
 
   function startEdit(item) {
+    setCreating(false);
     setEditing(item);
     setForm({
       prompt: item.prompt || "",
@@ -102,23 +114,25 @@ export default function AdminExercisesPage() {
 
   function cancelEdit() {
     setEditing(null);
+    setCreating(false);
     setForm(EMPTY_FORM);
     setFormError("");
   }
 
   async function submit(event) {
     event.preventDefault();
-    if (saving || !editing) return;
+    if (saving || (!editing && !creating)) return;
     setSaving(true);
     setFormError("");
     const options = splitLines(form.options);
-    if (editing.skill === "meaning" && options.length < 2) {
+    const selectedSkill = editing?.skill || createSkill;
+    if (selectedSkill === "meaning" && options.length < 2) {
       setFormError("Câu hỏi Meaning cần ít nhất 2 lựa chọn.");
       setSaving(false);
       return;
     }
     try {
-      await updateAdminExercise(editing.exercise_item_id, {
+      const payload = {
         prompt: form.prompt.trim(),
         options,
         correct_answer: form.correct_answer.trim(),
@@ -126,8 +140,19 @@ export default function AdminExercisesPage() {
         cloze: form.cloze.trim() || null,
         hint: form.hint.trim() || null,
         active: form.active,
-      });
-      setNotice(`Đã cập nhật câu hỏi ${editing.exercise_item_id}.`);
+      };
+      if (editing) {
+        await updateAdminExercise(editing.exercise_item_id, payload);
+        setNotice(`Đã cập nhật câu hỏi ${editing.exercise_item_id}.`);
+      } else {
+        if (!createVocabularyId) {
+          setFormError("Chọn từ vựng cho câu hỏi mới.");
+          setSaving(false);
+          return;
+        }
+        await createAdminExercise({ ...payload, vocabulary_id: createVocabularyId, skill: createSkill });
+        setNotice("Đã thêm câu hỏi mới.");
+      }
       cancelEdit();
       await load();
     } catch (err) {
@@ -138,7 +163,6 @@ export default function AdminExercisesPage() {
   }
 
   async function remove(item) {
-    if (!window.confirm(`Xóa câu hỏi "${item.prompt}"?`)) return;
     setBusyId(item.exercise_item_id);
     setError("");
     setNotice("");
@@ -151,7 +175,37 @@ export default function AdminExercisesPage() {
       setError(formatApiError(err, "Không thể xóa câu hỏi."));
     } finally {
       setBusyId(null);
+      setConfirmDelete(null);
     }
+  }
+
+  async function loadCreateWords(lessonId) {
+    setCreateLesson(lessonId);
+    setCreateWords([]);
+    setCreateVocabularyId("");
+    if (!lessonId) return;
+    setWordsLoading(true);
+    setFormError("");
+    try {
+      const data = await fetchAdminLessonWords(lessonId, { page: 1, page_size: 200 });
+      const words = Array.isArray(data.items) ? data.items : [];
+      setCreateWords(words);
+      setCreateVocabularyId(words[0]?.id || "");
+    } catch (err) {
+      setFormError(formatApiError(err, "Không thể tải từ vựng của bài học."));
+    } finally {
+      setWordsLoading(false);
+    }
+  }
+
+  function startCreate() {
+    setEditing(null);
+    setCreating(true);
+    setForm(EMPTY_FORM);
+    setCreateSkill("meaning");
+    setFormError("");
+    document.getElementById("admin-exercise-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (createLesson && !createWords.length) loadCreateWords(createLesson);
   }
 
   async function toggleActive(item) {
@@ -211,13 +265,18 @@ export default function AdminExercisesPage() {
         </div>
       </section>
 
-      {editing && (
+      {(editing || creating) && (
         <section className="sv-admin-form" id="admin-exercise-form" style={{ marginTop: 18 }}>
           <div className="sv-admin-inline" style={{ justifyContent: "space-between" }}>
-            <div><h2>Chỉnh sửa câu hỏi</h2><p>{editing.exercise_item_id} · {editing.word || editing.skill}</p></div>
-            <span className={`sv-admin-badge ${editing.skill}`}>{editing.skill}</span>
+            <div><h2>{editing ? "Chỉnh sửa câu hỏi" : "Thêm câu hỏi thủ công"}</h2><p>{editing ? `${editing.exercise_item_id} · ${editing.word || editing.skill}` : "Chọn bài học, từ vựng và kỹ năng trước khi lưu."}</p></div>
+            <span className={`sv-admin-badge ${editing?.skill || createSkill}`}>{editing?.skill || createSkill}</span>
           </div>
           <form onSubmit={submit}>
+            {creating && <div className="sv-admin-form-grid three">
+              <div><label className="sv-form-label" htmlFor="exercise-lesson">Bài học</label><select className="sv-answer-field" id="exercise-lesson" value={createLesson} onChange={(event) => loadCreateWords(event.target.value)} disabled={wordsLoading}><option value="">Chọn bài học</option>{lessonOptions.map((lesson) => <option value={lesson.id} key={lesson.id}>{lesson.title} ({lesson.word_count} từ)</option>)}</select></div>
+              <div><label className="sv-form-label" htmlFor="exercise-vocabulary">Từ vựng</label><select className="sv-answer-field" id="exercise-vocabulary" value={createVocabularyId} onChange={(event) => setCreateVocabularyId(event.target.value)} disabled={wordsLoading || !createWords.length}><option value="">{wordsLoading ? "Đang tải từ..." : "Chọn từ vựng"}</option>{createWords.map((word) => <option value={word.id} key={word.id}>{word.word} — {word.meaning}</option>)}</select></div>
+              <div><label className="sv-form-label" htmlFor="exercise-skill">Kỹ năng</label><select className="sv-answer-field" id="exercise-skill" value={createSkill} onChange={(event) => setCreateSkill(event.target.value)}>{SKILLS.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></div>
+            </div>}
             <label className="sv-form-label" htmlFor="exercise-prompt">Nội dung câu hỏi</label>
             <textarea className="sv-answer-field" id="exercise-prompt" name="prompt" value={form.prompt} onChange={updateField} rows={2} required />
             <div className="sv-admin-form-grid">
@@ -231,7 +290,7 @@ export default function AdminExercisesPage() {
               </div>
             </div>
             <label className="sv-form-label" htmlFor="exercise-options">Lựa chọn (mỗi dòng một lựa chọn)</label>
-            <textarea className="sv-answer-field" id="exercise-options" name="options" value={form.options} onChange={updateField} rows={3} placeholder={editing.skill === "meaning" ? "Bắt buộc với câu Meaning" : "Không bắt buộc với Spelling/Context"} />
+            <textarea className="sv-answer-field" id="exercise-options" name="options" value={form.options} onChange={updateField} rows={3} placeholder={(editing?.skill || createSkill) === "meaning" ? "Bắt buộc với câu Meaning" : "Không bắt buộc với Spelling/Context"} />
             <label className="sv-form-label" htmlFor="exercise-accepted">Đáp án được chấp nhận (mỗi dòng một đáp án)</label>
             <textarea className="sv-answer-field" id="exercise-accepted" name="accepted_answers" value={form.accepted_answers} onChange={updateField} rows={2} />
             <label className="sv-form-label" htmlFor="exercise-cloze">Câu cloze (Context)</label>
@@ -266,6 +325,7 @@ export default function AdminExercisesPage() {
           <option value="true">Đang hoạt động</option>
           <option value="false">Đã tắt</option>
         </select>
+        <button type="button" className="sv-btn sv-btn-primary" onClick={startCreate}>+ Thêm câu hỏi</button>
         <button type="button" className="sv-admin-refresh" onClick={load} disabled={loading}>{loading ? "Đang tải..." : "↻ Làm mới"}</button>
         <span className="sv-admin-count">Trang {page}/{pages}</span>
       </div>
@@ -283,7 +343,7 @@ export default function AdminExercisesPage() {
                     <td>{item.domain} · {item.level}</td>
                     <td><span className="sv-admin-strong">{item.correct_answer}</span>{item.options?.length ? <small className="sv-admin-muted"> · {item.options.length} lựa chọn</small> : null}</td>
                     <td><button type="button" className={`sv-admin-badge ${item.active ? "admin" : "off"}`} onClick={() => toggleActive(item)} disabled={busyId === item.exercise_item_id} title="Bấm để đổi trạng thái">{item.active ? "Hoạt động" : "Đã tắt"}</button></td>
-                    <td><div className="sv-admin-actions"><button type="button" className="sv-edit-link" onClick={() => startEdit(item)}>Sửa</button><button type="button" className="sv-danger-link" onClick={() => remove(item)} disabled={busyId === item.exercise_item_id}>{busyId === item.exercise_item_id ? "Đang xử lý..." : "Xóa"}</button></div></td>
+                    <td><div className="sv-admin-actions"><button type="button" className="sv-edit-link" onClick={() => startEdit(item)}>Sửa</button><button type="button" className="sv-danger-link" onClick={() => setConfirmDelete(item)} disabled={busyId === item.exercise_item_id}>{busyId === item.exercise_item_id ? "Đang xử lý..." : "Xóa"}</button></div></td>
                   </tr>
                 )) : <tr><td colSpan={6} className="sv-admin-empty-cell"><strong>Không tìm thấy câu hỏi</strong>Hãy tái tạo câu hỏi cho một bài học có từ vựng hoặc đổi bộ lọc.</td></tr>}
               </tbody>
@@ -292,6 +352,16 @@ export default function AdminExercisesPage() {
           {pages > 1 && <div className="sv-admin-pagination"><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1}>← Trước</button><span>Trang {page} / {pages}</span><button type="button" onClick={() => setPage((value) => Math.min(pages, value + 1))} disabled={page >= pages}>Sau →</button></div>}
         </>
       )}
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title="Xóa câu hỏi?"
+        message={confirmDelete ? `Xóa câu hỏi “${confirmDelete.prompt}”? Người học sẽ không còn gặp câu hỏi này trong các lần luyện tập tiếp theo.` : ""}
+        confirmText="Xóa câu hỏi"
+        danger
+        busy={busyId !== null}
+        onConfirm={() => confirmDelete && remove(confirmDelete)}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }
