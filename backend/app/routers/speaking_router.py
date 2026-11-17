@@ -2,7 +2,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.db.mongodb import get_database
-from app.models.speaking import SpeakingRequest
+from app.models.speaking import SpeakingRequest, WordCheckRequest
 from app.services import speaking_service
 from app.services.auth_service import get_current_user
 
@@ -10,6 +10,13 @@ router = APIRouter(tags=["speaking"])
 
 
 from app.services.ai_rate_limit import limit
+
+
+@router.post("/speaking/check-word")
+async def check_word(data: WordCheckRequest, user=Depends(get_current_user)):
+    from app.services.word_validation_service import check_word as validate
+    await limit(f"word-check:{user['id']}", max_requests=60)
+    return await validate(data.word)
 
 
 @router.get("/speaking/words")

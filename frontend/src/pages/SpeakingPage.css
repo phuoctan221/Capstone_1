@@ -6,6 +6,8 @@
 .speaking-card fieldset { padding: 16px; margin: 20px 0; border: 1px solid #dce4ee; border-radius: 10px; }
 .speaking-words { display: grid; gap: 12px; max-height: 260px; overflow: auto; }
 .speaking-words input { margin-right: 10px; }
+.speaking-search { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.speaking-search input { flex: 1 1 220px; min-width: 0; border: 1px solid #bcc9d9; border-radius: 8px; padding: 12px; font: inherit; }
 .speaking-target { font-size: clamp(28px, 6vw, 48px); color: #2658a8; overflow-wrap: anywhere; }
 .speaking-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0; }
 .speaking-error { color: #a52222; background: #fff1f1; padding: 14px; border-radius: 8px; }
@@ -27,3 +29,5 @@
 .speaking-phones .good { color: #17623c; background: #eaf7ef; }
 .speaking-phones .unrated { color: #526176; background: #f2f6fc; }
 .speaking-feedback-note { color: #526176; font-size: 13px; }
+.custom-speaking-list { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.custom-speaking-list li { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #f2f6fc; border-radius: 10px; }
