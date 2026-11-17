@@ -1,4 +1,5 @@
 from app.routers import speaking_router
+from app.routers import story_router
 from contextlib import asynccontextmanager
 import asyncio
 import logging
@@ -75,6 +76,7 @@ uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 app.include_router(speaking_router.router)
+app.include_router(story_router.router)
 app.include_router(auth_router.router)
 app.include_router(vocabulary_router.router)
 app.include_router(vocabulary_router.alias_router)
