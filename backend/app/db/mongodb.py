@@ -129,6 +129,29 @@ async def ensure_indexes() -> None:
         [("expires_at", 1)], expireAfterSeconds=0
     )
 
+    # --- level assessments ---------------------------------------------
+    await db.level_assessment_attempts.create_index(
+        [("attempt_id", 1)], unique=True,
+        partialFilterExpression={"attempt_id": {"$type": "string"}},
+    )
+    await db.level_assessment_attempts.create_index(
+        [("user_id", 1), ("domain", 1), ("level", 1), ("created_at", -1)]
+    )
+    await db.level_assessment_attempts.create_index(
+        [("expires_at", 1)], expireAfterSeconds=0
+    )
+    await db.level_assessment_results.create_index(
+        [("user_id", 1), ("domain", 1), ("level", 1)], unique=True
+    )
+
+    # --- password-reset OTPs -------------------------------------------
+    await db.password_reset_otps.create_index(
+        [("expires_at", 1)], expireAfterSeconds=0
+    )
+    await db.password_reset_otps.create_index(
+        [("email", 1), ("created_at", -1)]
+    )
+
     # --- preserved legacy collection ----------------------------------
     await db.flashcard_progress.create_index(
         [("user_id", 1), ("vocabulary_id", 1)], unique=True

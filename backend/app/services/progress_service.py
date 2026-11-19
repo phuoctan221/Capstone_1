@@ -12,8 +12,9 @@ from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 
 from app.core.config import settings
-from app.core.domains import MVP_DOMAIN_ORDER, domain_for_topic
+from app.core.domains import DOMAINS, MVP_DOMAIN_ORDER, domain_for_topic
 from app.db.mongodb import get_database
+from app.services import lesson_service
 from app.services.db_tx import run_in_transaction
 from app.services.exercise_service import grade as grade_exercise
 from app.services.fsrs_service import new_card_state
@@ -310,8 +311,26 @@ async def complete_lesson(
         "updated_at": now,
     }
     if unit is not None:
-        query["unit"] = int(unit)
-        updates["unit"] = int(unit)
+        unit = int(unit)
+        if unit < 1:
+            raise ValueError("unit must be a positive integer")
+        if unit > 1:
+            previous = await db[LESSON_PROGRESS].find_one(
+                {
+                    "user_id": user_id,
+                    "lesson_id": lesson_id,
+                    "unit": unit - 1,
+                    "completed": True,
+                },
+                {"_id": 1},
+            )
+            if not previous:
+                raise ValueError(
+                    f"Complete Unit {unit - 1} before completing Unit {unit}"
+                )
+        query["unit"] = unit
+        updates["unit"] = unit
+        updates["completion_source"] = "assessment"
     else:
         query["unit"] = {"$exists": False}
     try:
@@ -363,9 +382,10 @@ def _is_mastered(mastery: dict, threshold: float | None = None) -> bool:
     return all(float(mastery.get(skill, 0) or 0) >= limit for skill in SKILLS)
 
 
-async def get_user_progress(user_id: str) -> dict:
+async def get_user_progress(user_id: str, user: dict | None = None) -> dict:
     db = get_database()
-    user = await db[USERS].find_one({"_id": user_id}) or {}
+    if user is None:
+        user = await db[USERS].find_one({"_id": user_id}) or {}
     pairs = await _states_with_vocab(user_id)
     learned = sum(1 for state, _ in pairs if _is_engaged(state))
     mastered = sum(1 for state, _ in pairs if _is_mastered(state.get("mastery") or {}))
@@ -490,6 +510,76 @@ async def get_mastery_breakdown(user_id: str) -> dict:
         "skills": skills,
         "lessons": sorted(per_lesson.values(), key=lambda x: (x["domain"], x["level"])),
     }
+
+
+async def get_assessment_status(user_id: str) -> dict:
+    """Trả về trạng thái assessment (đã qua / đang đánh giá / khóa) theo từng
+    lĩnh vực + cấp độ, dùng cho trang Level-Up Hub."""
+    db = get_database()
+
+    # Cấp độ đã qua assessment (có record trong kết quả)
+    passed: set[tuple[str, str]] = set()
+    async for row in db["level_assessment_results"].find({"user_id": user_id}):
+        domain = row.get("domain")
+        level = row.get("level")
+        if domain and level:
+            passed.add((domain, level))
+
+    # Ðang có attempt bị "active" (đang làm hoặc chờ chấm)
+    in_progress: dict[str, set[str]] = {domain: set() for domain in MVP_DOMAIN_ORDER}
+    async for att in db["level_assessment_attempts"].find({"user_id": user_id}):
+        if att.get("status") == "active":
+            in_progress[att.get("domain", "general")].add(att.get("level"))
+
+    # Tiến độ bài học theo lesson_id
+    progress = await lesson_service._lesson_progress(user_id)
+
+    domains = []
+    for domain in MVP_DOMAIN_ORDER:
+        # Số từ theo cấp độ trong đúng lĩnh vực hiện tại.
+        counts: dict[str, int] = {}
+        async for row in db[VOCAB].aggregate([
+            {"$match": lesson_service.domain_query(domain)},
+            {"$group": {"_id": "$level", "count": {"$sum": 1}}},
+        ]):
+            counts[row["_id"] or "A1"] = row["count"]
+        domain_levels = []
+        for level in lesson_service.LEVEL_ORDER:
+            lesson_id = lesson_service.lesson_slug(domain, level)
+            entry = progress.get(lesson_id)
+            total = counts.get(level, 0)
+            unit_count = lesson_service.unit_count(total)
+            completed = bool(entry) and (
+                entry.get("legacy")
+                or all(
+                    unit in entry.get("units", set())
+                    for unit in range(1, unit_count + 1)
+                )
+            )
+            passed_now = (domain, level) in passed
+            in_progress_now = level in in_progress.get(domain, set())
+            if completed and passed_now:
+                status = "passed"
+            elif completed and (in_progress_now or not passed_now):
+                status = "ready"
+            else:
+                status = "locked"
+
+            domain_levels.append({
+                "level": level,
+                "completed": completed,
+                "assessment_passed": passed_now,
+                "status": status,
+                "total_words": total,
+            })
+        domains.append({
+            "id": domain,
+            "name": DOMAINS[domain]["name"],
+            "name_vi": DOMAINS[domain]["name_vi"],
+            "levels": domain_levels,
+        })
+
+    return {"user_id": user_id, "domains": domains}
 
 
 async def get_history(user_id: str, limit: int = 50) -> dict:

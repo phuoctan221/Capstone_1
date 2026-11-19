@@ -36,6 +36,7 @@ export default function LessonPage() {
   const unitQuery = `?unit=${currentUnit}`;
   const prevUnit = currentUnit > 1 ? currentUnit - 1 : null;
   const nextUnit = currentUnit < unitCount ? currentUnit + 1 : null;
+  const canOpenNextUnit = Boolean(lesson.next_unit_unlocked);
 
   return <div className="sv-page">
     <div className="sv-breadcrumb"><Link to="/learn">Lộ trình</Link><span>/</span><span>{domain?.label || lesson.topic}</span><span>/</span><b>{lesson.level} · Unit {currentUnit}</b></div>
@@ -44,14 +45,14 @@ export default function LessonPage() {
     <div className="sv-unit-nav">
       {prevUnit ? <Link className="sv-btn sv-btn-outline" to={`/lessons/${lessonId}?unit=${prevUnit}`}>← Bài trước</Link> : <span className="sv-btn sv-btn-outline sv-link-disabled" aria-disabled="true">← Bài trước</span>}
       <span className="sv-muted-small">Unit {currentUnit} / {unitCount}</span>
-      {nextUnit ? <Link className="sv-btn sv-btn-outline" to={`/lessons/${lessonId}?unit=${nextUnit}`}>Bài tiếp →</Link> : <span className="sv-btn sv-btn-outline sv-link-disabled" aria-disabled="true">Bài tiếp →</span>}
+      {nextUnit && canOpenNextUnit ? <Link className="sv-btn sv-btn-outline" to={`/lessons/${lessonId}?unit=${nextUnit}`}>Bài tiếp →</Link> : <span className="sv-btn sv-btn-outline sv-link-disabled" aria-disabled="true">Bài tiếp →</span>}
     </div>
 
     <SectionHeading eyebrow="RÈN LUYỆN MỖI KỸ NĂNG" title="Chọn một cách luyện tập" description="Kết quả được chấm tại backend và cập nhật Mastery riêng cho từng kỹ năng."/>
     <div className="sv-skill-grid">{SKILLS.map((skill) => <Link key={skill.id} to={`/lessons/${lessonId}/practice/${skill.id}${unitQuery}`} className={`sv-skill-card sv-tone-${skill.tone}`}><span className="sv-skill-glyph">{skill.glyph}</span><span className="sv-skill-index">0{SKILLS.indexOf(skill)+1} / 03</span><h3>{skill.label}</h3><p>{skill.subtitle}</p><span className="sv-skill-action">Bắt đầu luyện →</span></Link>)}</div>
 
     <div className="sv-two-col sv-lesson-bottom-grid">
-      <section className="sv-panel"><SectionHeading title="Kiểm tra cuối bài" description="Trắc nghiệm tổng hợp, tính điểm và XP qua backend."/><p className="sv-panel-help">{words.length < 2 ? "Cần thêm từ vựng để mở bài kiểm tra." : `Gồm tối đa ${Math.min(10, words.length)} câu hỏi theo nội dung unit này.`}</p><Link to={`/lessons/${lessonId}/quiz${unitQuery}`} className={`sv-btn sv-btn-primary${words.length < 2 ? " sv-link-disabled" : ""}`} aria-disabled={words.length < 2} onClick={words.length < 2 ? (e) => e.preventDefault() : undefined}>Làm bài kiểm tra →</Link></section>
+      <section className="sv-panel"><SectionHeading title="Kiểm tra cuối bài" description="Trắc nghiệm tổng hợp, tính điểm và XP qua backend."/><p className="sv-panel-help">{words.length < 2 ? "Cần thêm từ vựng để mở bài kiểm tra." : lesson.completed ? (nextUnit ? `Unit ${currentUnit} đã hoàn thành. Bạn có thể sang Unit ${nextUnit}.` : "Bạn đã hoàn thành unit cuối cùng.") : `Đạt từ 70% trong Quiz để hoàn thành Unit ${currentUnit}${nextUnit ? ` và mở Unit ${nextUnit}` : ""}.`}</p><Link to={`/lessons/${lessonId}/quiz${unitQuery}`} className={`sv-btn sv-btn-primary${words.length < 2 ? " sv-link-disabled" : ""}`} aria-disabled={words.length < 2} onClick={words.length < 2 ? (e) => e.preventDefault() : undefined}>{lesson.completed && nextUnit ? `Làm lại Quiz Unit ${currentUnit} →` : "Làm bài kiểm tra →"}</Link>{nextUnit && !canOpenNextUnit && <p className="sv-muted-small" style={{ marginTop: "0.75rem" }}>Hoàn thành Quiz Unit {currentUnit} đạt từ 70% để mở Unit {nextUnit}.</p>}</section>
       <section className="sv-panel"><SectionHeading title="Thông tin bài học"/><div className="sv-detail-row"><span>Lĩnh vực</span><b>{domain?.label || lesson.topic}</b></div><div className="sv-detail-row"><span>Trình độ</span><b>{lesson.level}</b></div><div className="sv-detail-row"><span>Unit</span><b>{currentUnit}/{unitCount}</b></div><div className="sv-detail-row"><span>Số từ trong unit</span><b>{total}</b></div><div className="sv-detail-row"><span>Tiến độ unit</span><b>{percent}%</b></div></section>
     </div>
 

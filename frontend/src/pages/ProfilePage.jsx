@@ -377,74 +377,75 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="card profile-password-card">
-            <div className="profile-card-header">
-              <h3>Đổi mật khẩu</h3>
-            </div>
-            <form onSubmit={savePassword} className="profile-password-form">
-              <div className="profile-password-grid">
-                <div className="form-group">
-                  <label htmlFor="current-password">Mật khẩu hiện tại</label>
-                  <input
-                    id="current-password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => {
-                      setCurrentPassword(e.target.value);
-                      setPwError("");
-                      setPwOk("");
-                    }}
-                    autoComplete="current-password"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="new-password">Mật khẩu mới</label>
-                  <input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => {
-                      setNewPassword(e.target.value);
-                      setPwError("");
-                      setPwOk("");
-                    }}
-                    minLength={6}
-                    autoComplete="new-password"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="confirm-password">Xác nhận mật khẩu mới</label>
-                  <input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => {
-                      setConfirmPassword(e.target.value);
-                      setPwError("");
-                      setPwOk("");
-                    }}
-                    minLength={6}
-                    autoComplete="new-password"
-                  />
-                </div>
-              </div>
-              {pwError && <p className="auth-error" role="alert">{pwError}</p>}
-              {pwOk && <p className="profile-success">{pwOk}</p>}
-              <div className="profile-form-actions">
-                <button className="profile-btn-primary" type="submit" disabled={changingPw}>
-                  {changingPw ? (
-                    <>
-                      <span className="btn-spinner" aria-hidden="true" />
-                      Đang đổi...
-                    </>
-                  ) : (
-                    "Đổi mật khẩu"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
+      </div>
+
+      <div className="card profile-password-card">
+        <div className="profile-card-header">
+          <h3>Đổi mật khẩu</h3>
+        </div>
+        <form onSubmit={savePassword} className="profile-password-form">
+          <div className="profile-password-grid">
+            <div className="form-group">
+              <label htmlFor="current-password">Mật khẩu hiện tại</label>
+              <input
+                id="current-password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => {
+                  setCurrentPassword(e.target.value);
+                  setPwError("");
+                  setPwOk("");
+                }}
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="new-password">Mật khẩu mới</label>
+              <input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  setPwError("");
+                  setPwOk("");
+                }}
+                minLength={6}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="confirm-password">Xác nhận mật khẩu mới</label>
+              <input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setPwError("");
+                  setPwOk("");
+                }}
+                minLength={6}
+                autoComplete="new-password"
+              />
+            </div>
+          </div>
+          {pwError && <p className="auth-error" role="alert">{pwError}</p>}
+          {pwOk && <p className="profile-success">{pwOk}</p>}
+          <div className="profile-form-actions">
+            <button className="profile-btn-primary" type="submit" disabled={changingPw}>
+              {changingPw ? (
+                <>
+                  <span className="btn-spinner" aria-hidden="true" />
+                  Đang đổi...
+                </>
+              ) : (
+                "Đổi mật khẩu"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

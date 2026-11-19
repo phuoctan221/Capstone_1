@@ -170,15 +170,18 @@ async def submit_quiz(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         if lesson:
-            await progress_service.complete_lesson(
-                user["id"],
-                lesson_id,
-                lesson["topic"],
-                True,
-                lesson.get("learned_count", 0),
-                lesson.get("mastered_count", 0),
-                unit=lesson.get("unit"),
-            )
+            try:
+                await progress_service.complete_lesson(
+                    user["id"],
+                    lesson_id,
+                    lesson["topic"],
+                    True,
+                    lesson.get("learned_count", 0),
+                    lesson.get("mastered_count", 0),
+                    unit=lesson.get("unit"),
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     progress = await progress_service.get_user_progress(user["id"])
     return QuizResultOut(

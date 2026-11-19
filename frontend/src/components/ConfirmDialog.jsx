@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./ConfirmDialog.css";
 
 const POWER_ICON = (
@@ -23,19 +24,22 @@ export default function ConfirmDialog({
 
   useEffect(() => {
     if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     confirmRef.current?.focus();
     const onKey = (event) => {
       if (event.key === "Escape") onCancel?.();
     };
     document.addEventListener("keydown", onKey);
     return () => {
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKey);
     };
   }, [open, onCancel]);
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="sv-confirm-overlay" onClick={onCancel} role="presentation">
       <div
         className="sv-confirm-card"
@@ -66,5 +70,6 @@ export default function ConfirmDialog({
         </div>
       </div>
     </div>
+    , document.body
   );
 }

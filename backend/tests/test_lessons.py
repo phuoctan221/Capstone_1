@@ -5,6 +5,7 @@ from bson import ObjectId
 from tests.support import ApiTestCase
 
 from app.db import mongodb
+from app.services import progress_service
 
 
 class LessonTests(ApiTestCase):
@@ -69,6 +70,10 @@ class LessonTests(ApiTestCase):
             }
         )
 
+        await mongodb.get_database().level_assessment_results.insert_one(
+            {"user_id": me.json()["id"], "domain": "general", "level": "A1"}
+        )
+
         listed = await self.client.get("/lessons", headers=headers)
         lessons = {item["id"]: item for item in listed.json()}
         self.assertTrue(lessons["general-a2"]["unlocked"])
@@ -76,6 +81,27 @@ class LessonTests(ApiTestCase):
 
         unlocked = await self.client.get("/lessons/general-a2", headers=headers)
         self.assertEqual(unlocked.status_code, 200, unlocked.text)
+
+    async def test_declared_b1_placement_opens_b1_without_lower_level_completion(self):
+        await self.add_general_words(2, level="A2")
+        await self.add_general_words(2, level="B1")
+        headers = await self.auth_headers()
+        me = await self.client.post(
+            "/auth/onboarding",
+            json={"learning_level": "B1", "interests": ["general"]},
+            headers=headers,
+        )
+        self.assertEqual(me.status_code, 200, me.text)
+
+        listed = await self.client.get("/lessons", headers=headers)
+        self.assertEqual(listed.status_code, 200, listed.text)
+        lessons = {item["id"]: item for item in listed.json()}
+        self.assertTrue(lessons["general-b1"]["unlocked"])
+        self.assertTrue(lessons["general-a1"]["review_only"])
+        self.assertTrue(lessons["general-a2"]["review_only"])
+
+        opened = await self.client.get("/lessons/general-b1", headers=headers)
+        self.assertEqual(opened.status_code, 200, opened.text)
 
     async def test_lesson_detail_contains_words(self):
         headers = await self.auth_headers()
@@ -106,6 +132,11 @@ class LessonTests(ApiTestCase):
         self.assertEqual(general["units"][0]["word_count"], 15)
         self.assertEqual(general["units"][1]["word_count"], 6)
         self.assertEqual(general["next_unit"], 1)
+
+        me = await self.client.get("/auth/me", headers=headers)
+        await mongodb.get_database().lesson_progress.insert_one(
+            {"user_id": me.json()["id"], "lesson_id": "general-a1", "unit": 1, "completed": True}
+        )
 
         second = await self.client.get(
             "/lessons/general-a1", params={"unit": 2}, headers=headers
@@ -148,6 +179,19 @@ class LessonTests(ApiTestCase):
             "/lessons/general-a1", params={"unit": 99}, headers=headers
         )
         self.assertEqual(response.status_code, 400, response.text)
+
+    async def test_cannot_complete_a_unit_when_the_previous_unit_is_incomplete(self):
+        await self.add_general_words(24)
+        headers = await self.auth_headers()
+        user_id = (await self.client.get("/auth/me", headers=headers)).json()["id"]
+        with self.assertRaisesRegex(ValueError, "Complete Unit 1"):
+            await progress_service.complete_lesson(
+                user_id, "general-a1", "general", True, unit=2
+            )
+        missing = await mongodb.get_database().lesson_progress.find_one(
+            {"user_id": user_id, "lesson_id": "general-a1", "unit": 2}
+        )
+        self.assertIsNone(missing)
 
     async def test_lesson_requires_auth(self):
         response = await self.client.get("/lessons")

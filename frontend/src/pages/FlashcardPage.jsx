@@ -96,11 +96,25 @@ function humanInterval(ms) {
   return `sau ${Math.round(days / 30)} tháng`;
 }
 
+function suggestedRatingForResponse(responseTimeMs) {
+  if (responseTimeMs < 4000) return 4;
+  if (responseTimeMs <= 12000) return 3;
+  return 2;
+}
+
+function formatResponseTime(responseTimeMs) {
+  return `${(responseTimeMs / 1000).toLocaleString("vi-VN", {
+    maximumFractionDigits: 1,
+  })} giây`;
+}
+
 export default function FlashcardPage() {
   const [cards, setCards] = useState([]);
   const [stats, setStats] = useState(null);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [suggestedRating, setSuggestedRating] = useState(null);
+  const [responseTimeMs, setResponseTimeMs] = useState(null);
   const [mode, setMode] = useState(readMode);
   const [answer, setAnswer] = useState("");
   const [checked, setChecked] = useState(false);
@@ -111,6 +125,7 @@ export default function FlashcardPage() {
   const [toast, setToast] = useState(null);
   const reviewId = useRef(crypto.randomUUID());
   const toastTimer = useRef(null);
+  const responseStartedAt = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -160,6 +175,18 @@ export default function FlashcardPage() {
   const match = checked && answerMatches(answer, expectedAnswer);
   const ready = !loading && !error && !!current;
 
+  useEffect(() => {
+    if (!current?.vocabulary_id || effectiveMode === "classic") {
+      responseStartedAt.current = null;
+      setSuggestedRating(null);
+      setResponseTimeMs(null);
+      return;
+    }
+    responseStartedAt.current = performance.now();
+    setSuggestedRating(null);
+    setResponseTimeMs(null);
+  }, [current?.vocabulary_id, effectiveMode]);
+
   function changeMode(next) {
     setMode(next);
     try { localStorage.setItem(MODE_KEY, next); } catch { }
@@ -169,32 +196,45 @@ export default function FlashcardPage() {
   function handleCheck(event) {
     event.preventDefault();
     if (!answer.trim() || checked || busy) return;
+    const elapsed = Math.max(0, Math.round(performance.now() - (responseStartedAt.current ?? performance.now())));
+    setResponseTimeMs(elapsed);
     if (!answerMatches(answer, expectedAnswer)) {
+      setSuggestedRating(null);
       setChecked(true);
       handleReview(1);
       return;
     }
+    setSuggestedRating(suggestedRatingForResponse(elapsed));
     setChecked(true);
   }
+
+  const toggleReveal = useCallback(() => {
+    setRevealed((value) => !value);
+  }, []);
 
   useEffect(() => {
     function onKey(event) {
       if (!ready || busy) return;
       if (effectiveMode === "classic") {
-        if (!revealed && (event.code === "Space" || event.key === "Enter")) {
-          event.preventDefault(); setRevealed(true); return;
+        if (event.code === "Space" || event.key === "Enter") {
+          event.preventDefault(); toggleReveal(); return;
         }
         const digit = /^Digit([1-4])$/.exec(event.code) || /^Numpad([1-4])$/.exec(event.code);
         if (digit) { event.preventDefault(); handleReview(Number(digit[1])); }
         return;
       }
       if (!checked) return;
+      if (event.code === "Enter" && match && suggestedRating) {
+        event.preventDefault();
+        handleReview(suggestedRating);
+        return;
+      }
       const digit = /^Digit([1-4])$/.exec(event.code) || /^Numpad([1-4])$/.exec(event.code);
       if (digit) { event.preventDefault(); handleReview(Number(digit[1])); }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [ready, busy, revealed, checked, effectiveMode, handleReview]);
+  }, [ready, busy, revealed, checked, effectiveMode, handleReview, match, suggestedRating, toggleReveal]);
 
   if (loading) return <PageLoading label="Đang lấy những từ đến hạn ôn..."/>;
 
@@ -214,15 +254,15 @@ export default function FlashcardPage() {
           {MODES.map((item) => <button key={item.id} type="button" role="tab" aria-selected={mode === item.id} className={`sv-review-mode${mode === item.id ? " is-active" : ""}`} onClick={() => changeMode(item.id)}><b>{item.label}</b><small>{item.hint}</small></button>)}
         </div>
         {effectiveMode === "classic" ? <>
-          <button type="button" className={`sv-flashcard${revealed ? " revealed" : ""}`} onClick={() => setRevealed(true)} aria-label={revealed ? "Đang hiển thị nghĩa của từ" : "Lật thẻ để xem nghĩa"}>
+          <button type="button" className={`sv-flashcard${revealed ? " revealed" : ""}`} onClick={toggleReveal} aria-label={revealed ? "Lật thẻ để xem từ vựng" : "Lật thẻ để xem nghĩa"}>
             <span className="sv-flashcard-kicker">{revealed ? "MẶT SAU · NGHĨA" : "MẶT TRƯỚC · TỪ VỰNG"}</span>
             <strong>{revealed ? current.meaning : current.word}</strong>
             {revealed && current.example ? <span className="sv-flashcard-example">“{current.example}”</span> : current.phonetic ? <span className="sv-flashcard-pronunciation">{current.phonetic}</span> : null}
             {revealed && recall != null && recall > 0 && <span className="sv-flashcard-recall">Khả năng nhớ hiện tại: <b>{Math.round(recall * 100)}%</b></span>}
-            <span className="sv-flashcard-tap">{revealed ? "Đánh giá mức độ ghi nhớ bên dưới" : "Nhấn thẻ hoặc Space để xem nghĩa ↗"}</span>
+            <span className="sv-flashcard-tap">{revealed ? "Nhấn thẻ hoặc Space để xem từ vựng ↩" : "Nhấn thẻ hoặc Space để xem nghĩa ↗"}</span>
           </button>
           <div className="sv-rating-grid">{RATINGS.map((rating) => <button type="button" className={`sv-rating sv-rating-${rating.tone}`} disabled={busy} key={rating.id} onClick={() => handleReview(rating.id)}><b>{rating.meaning}</b><small>{rating.label}</small></button>)}</div>
-          <div className="sv-kbd-hint">{revealed ? <><kbd>1</kbd>–<kbd>4</kbd> đánh giá bằng bàn phím</> : <><kbd>1</kbd>–<kbd>4</kbd> đánh giá · <kbd>Space</kbd> xem nghĩa</>}</div>
+          <div className="sv-kbd-hint"><kbd>Space</kbd> lật thẻ · <kbd>1</kbd>–<kbd>4</kbd> đánh giá bằng bàn phím</div>
         </> : <>
           <div className="sv-recall-card" key={current.vocabulary_id}>
             <span className="sv-flashcard-kicker">{effectiveMode === "cloze" ? "ĐIỀN TỪ CÒN THIẾU" : "NHỚ NGHĨA CỦA TỪ"}</span>
@@ -242,10 +282,11 @@ export default function FlashcardPage() {
               <b>{match ? "Khớp đáp án" : "Chưa khớp đáp án"}</b>
               <span>{effectiveMode === "cloze" ? `Từ đúng: ${cloze.answer}` : `Nghĩa đúng: ${current.meaning}`}</span>
               {effectiveMode === "recall" && current.example ? <em>“{current.example}”</em> : null}
+              {match && suggestedRating && responseTimeMs != null ? <span className="sv-rating-suggestion">Trả lời trong {formatResponseTime(responseTimeMs)} · Gợi ý: <b>{RATINGS.find((rating) => rating.id === suggestedRating)?.meaning}</b></span> : null}
               {recall != null && recall > 0 ? <span className="sv-flashcard-recall">Khả năng nhớ hiện tại: <b>{Math.round(recall * 100)}%</b></span> : null}
             </div> : <div className="sv-review-hint">Gõ câu trả lời rồi nhấn <kbd>Enter</kbd> để kiểm tra.</div>}
           </div>
-          {checked && <><div className="sv-rating-grid">{RATINGS.map((rating) => <button type="button" className={`sv-rating sv-rating-${rating.tone}`} disabled={busy} key={rating.id} onClick={() => handleReview(rating.id)}><b>{rating.meaning}</b><small>{rating.label}</small></button>)}</div><div className="sv-kbd-hint"><kbd>1</kbd>–<kbd>4</kbd> đánh giá bằng bàn phím</div></>}
+          {checked && <><div className="sv-rating-grid">{RATINGS.map((rating) => <button type="button" className={`sv-rating sv-rating-${rating.tone}${match && rating.id === suggestedRating ? " is-suggested" : ""}`} disabled={busy} key={rating.id} onClick={() => handleReview(rating.id)}><b>{rating.meaning}</b><small>{rating.label}{match && rating.id === suggestedRating ? " · Gợi ý" : ""}</small></button>)}</div><div className="sv-kbd-hint">{match && suggestedRating ? <><kbd>Enter</kbd> xác nhận gợi ý · <kbd>1</kbd>–<kbd>4</kbd> chọn mức khác</> : <><kbd>1</kbd>–<kbd>4</kbd> đánh giá bằng bàn phím</>}</div></>}
         </>}
       </>}
     </div><aside className="sv-review-sidebar"><SectionHeading title="Cách ôn hiệu quả"/><ol className="sv-guidelines"><li>Đánh giá 4 mức ngay trên mặt trước, không cần lật thẻ.</li><li>Recall/Cloze trả lời sai sẽ tự chuyển từ và tính là đã quên.</li><li>Chọn đúng mức độ ghi nhớ thực tế để FSRS tính lịch ôn.</li></ol><div className="sv-review-note">Lịch ôn được lưu bởi backend. Không chấm Mastery chỉ bằng hành động lật thẻ.</div></aside></div>

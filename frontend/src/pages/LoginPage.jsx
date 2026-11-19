@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { login, fetchMe } from "../services/authService";
+import { login } from "../services/authService";
 import { isAdmin } from "../constants/domains";
 import "./LoginPage.css";
 
@@ -35,8 +35,8 @@ export default function LoginPage() {
     setError("");
     try {
       const res = await login(form.email.trim(), form.password);
-      // Refresh the account role before deciding between Admin and User.
-      const user = await fetchMe().catch(() => res?.user);
+      // /auth/login already returns the current user, including role and onboarding state.
+      const user = res?.user;
       if (isAdmin(user)) {
         navigate("/admin", { replace: true });
       } else if (user && user.onboarded === false) {
@@ -123,6 +123,7 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+            <p className="auth-forgot"><Link to="/forgot-password">Quên mật khẩu?</Link></p>
             {error && (
               <p className="auth-error" role="alert">
                 {error}

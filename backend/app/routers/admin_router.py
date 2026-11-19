@@ -1,3 +1,4 @@
+import asyncio
 import re
 import secrets
 import string
@@ -122,51 +123,74 @@ def _parse_vocab_id(value: str) -> ObjectId:
 async def admin_stats():
     db = get_database()
 
-    users_total = await db.users.count_documents({})
-    admins = await db.users.count_documents({"role": "admin"})
+    async def grouped(collection, field: str) -> list[dict]:
+        return [
+            row async for row in collection.aggregate(
+                [{"$group": {"_id": f"${field}", "count": {"$sum": 1}}}]
+            )
+        ]
 
-    vocab_by_domain: dict[str, int] = {}
-    for slug in MVP_DOMAIN_ORDER:
-        vocab_by_domain[slug] = await db.vocabularies.count_documents(
-            lesson_service.domain_query(slug)
-        )
+    async def count_levels_for_domain(slug: str) -> int:
+        rows = [
+            row async for row in db.vocabularies.aggregate(
+                [
+                    {"$match": lesson_service.domain_query(slug)},
+                    {"$group": {"_id": "$level"}},
+                ]
+            )
+        ]
+        return len(rows)
 
-    vocab_by_level: dict[str, int] = {}
-    async for row in db.vocabularies.aggregate(
-        [{"$group": {"_id": "$level", "count": {"$sum": 1}}}]
-    ):
-        vocab_by_level[row["_id"] or "A1"] = row["count"]
+    async def recent_users() -> list[dict]:
+        return [
+            _clean_user(doc)
+            async for doc in db.users.find({}, {"password_hash": 0})
+            .sort("created_at", -1)
+            .limit(5)
+        ]
 
-    derived_lessons = 0
-    for slug in MVP_DOMAIN_ORDER:
-        async for _row in db.vocabularies.aggregate(
-            [
-                {"$match": lesson_service.domain_query(slug)},
-                {"$group": {"_id": "$level"}},
-            ]
-        ):
-            derived_lessons += 1
-    metadata_lessons = await db.lessons.count_documents({})
+    (
+        users_total,
+        admins,
+        vocab_domain_counts,
+        vocab_level_rows,
+        derived_counts,
+        metadata_lessons,
+        exercises_total,
+        exercises_active,
+        exercise_skill_rows,
+        exercise_domain_rows,
+        lessons_with_exercises,
+        recent_users,
+    ) = await asyncio.gather(
+        db.users.count_documents({}),
+        db.users.count_documents({"role": "admin"}),
+        asyncio.gather(
+            *(db.vocabularies.count_documents(lesson_service.domain_query(slug)) for slug in MVP_DOMAIN_ORDER)
+        ),
+        grouped(db.vocabularies, "level"),
+        asyncio.gather(*(count_levels_for_domain(slug) for slug in MVP_DOMAIN_ORDER)),
+        db.lessons.count_documents({}),
+        db.exercise_items.count_documents({}),
+        db.exercise_items.count_documents({"active": {"$ne": False}}),
+        grouped(db.exercise_items, "skill"),
+        grouped(db.exercise_items, "domain"),
+        _exercise_counts(),
+        recent_users(),
+    )
 
-    exercises_total = await db.exercise_items.count_documents({})
-    exercises_active = await db.exercise_items.count_documents({"active": {"$ne": False}})
+    vocab_by_domain = dict(zip(MVP_DOMAIN_ORDER, vocab_domain_counts))
+    vocab_by_level = {row["_id"] or "A1": row["count"] for row in vocab_level_rows}
+    derived_lessons = sum(derived_counts)
     exercises_by_skill = {"meaning": 0, "spelling": 0, "context": 0}
-    async for row in db.exercise_items.aggregate(
-        [{"$group": {"_id": "$skill", "count": {"$sum": 1}}}]
-    ):
+    for row in exercise_skill_rows:
         if row["_id"] in exercises_by_skill:
             exercises_by_skill[row["_id"]] = row["count"]
     exercises_by_domain: dict[str, int] = {}
-    async for row in db.exercise_items.aggregate(
-        [{"$group": {"_id": "$domain", "count": {"$sum": 1}}}]
-    ):
+    for row in exercise_domain_rows:
         key = domain_for_topic(row["_id"])
         exercises_by_domain[key] = exercises_by_domain.get(key, 0) + row["count"]
-    lessons_with_exercises = len(await _exercise_counts())
-
-    recent_users = []
-    async for doc in db.users.find({}, {"password_hash": 0}).sort("created_at", -1).limit(5):
-        recent_users.append(_clean_user(doc))
+    lessons_with_exercises = len(lessons_with_exercises)
 
     return {
         "users": {

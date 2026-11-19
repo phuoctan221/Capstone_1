@@ -1,8 +1,10 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.models.exercise import AnswerSubmit, SessionCreate
 from app.models.learning import FSRSReviewRequest, ReviewStats
-from app.services import daily_service, learning_service, session_service
+from app.services import daily_service, learning_service, lesson_service, progress_service, session_service
 from app.services.auth_service import get_current_user
 
 router = APIRouter(prefix="/learning", tags=["learning"])
@@ -43,6 +45,27 @@ async def daily_plan(
         return await daily_service.get_daily_plan(user["id"], tz_offset=tz_offset)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/dashboard")
+async def dashboard(
+    tz_offset: int = Query(0, ge=-720, le=840),
+    user: dict = Depends(get_current_user),
+):
+    """Load all learner dashboard data with one authenticated request."""
+    user_id = user["id"]
+    progress, stats, lessons, daily = await asyncio.gather(
+        progress_service.get_user_progress(user_id, user=user),
+        learning_service.get_stats(user_id),
+        lesson_service.list_lessons(user_id, user=user),
+        daily_service.get_daily_plan(user_id, tz_offset=tz_offset, user=user),
+    )
+    return {
+        "progress": progress,
+        "stats": stats,
+        "lessons": lessons,
+        "daily": daily,
+    }
 
 
 # --- Learning sessions -------------------------------------------------
