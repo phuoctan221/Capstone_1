@@ -92,8 +92,9 @@ class SpeakingTests(unittest.IsolatedAsyncioTestCase):
     async def test_custom_words_do_not_modify_learning_progress(self):
         collection = SimpleNamespace(insert_one=AsyncMock(return_value=SimpleNamespace(inserted_id=ObjectId())))
         db = {"speaking_exercises": collection}
-        with patch.object(speaking, "get_database", return_value=db), patch.object(speaking, "learned_words", AsyncMock(return_value=[])):
+        with patch.object(speaking, "get_database", return_value=db), patch.object(speaking, "learned_words", AsyncMock(return_value=[])), patch.object(speaking, "validate_custom_words", AsyncMock()) as validate:
             result = await speaking.create_exercise("me", SpeakingRequest(custom_words=["hello"]))
+        validate.assert_awaited_once_with(["hello"])
         self.assertEqual(result["items"], [{"text": "hello", "source": "custom"}])
         self.assertEqual(collection.insert_one.call_args.args[0]["user_id"], "me")
 

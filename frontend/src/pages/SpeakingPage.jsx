@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import api from "../services/api";
 import PronunciationPreview from "../components/PronunciationPreview";
 import SpeakingFeedback from "../components/SpeakingFeedback";
+import CustomSpeakingWords from "../components/CustomSpeakingWords";
 import "./SpeakingPage.css";
 
 function errorText(error) {
@@ -10,11 +11,15 @@ function errorText(error) {
   return typeof detail === "string" ? detail : "Không thực hiện được. Kiểm tra dữ liệu hoặc kết nối và thử lại.";
 }
 
+const searchText = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().trim();
+
 export default function SpeakingPage() {
   const [params, setParams] = useSearchParams();
   const exerciseId = params.get("exercise");
   const [words, setWords] = useState([]);
   const [selected, setSelected] = useState([]);
+  const [customWords, setCustomWords] = useState([]);
+  const [query, setQuery] = useState("");
   const [mode, setMode] = useState("auto");
   const [exercise, setExercise] = useState(null);
   const [index, setIndex] = useState(0);
@@ -60,7 +65,8 @@ export default function SpeakingPage() {
     try {
       const r = await api.post("/speaking/exercises", {
         auto_select: mode === "auto",
-        vocabulary_ids: mode === "auto" ? [] : selected,
+        vocabulary_ids: mode === "learned" ? selected : [],
+        custom_words: mode === "custom" ? customWords : [],
       });
       setParams({ exercise: r.data.id });
     } catch (e) { setError(errorText(e)); }
@@ -121,30 +127,39 @@ export default function SpeakingPage() {
   }
 
   const result = exercise?.results?.[index];
+  const filteredWords = words.filter(w => searchText(`${w.word} ${w.meaning}`).includes(searchText(query)));
   return <section className="speaking-page">
     <h1>Luyện nói</h1>
-    <p>Luyện phát âm và củng cố những từ bạn đã học.</p>
+    <p>Luyện phát âm từ đã học hoặc thêm từ bạn muốn luyện.</p>
     {error && <p role="alert" className="speaking-error">{error}</p>}
     {!exercise ? <div className="speaking-card">
       <h2>1. Chọn nội dung luyện tập</h2>
       <label>Nguồn từ vựng <select value={mode} onChange={e => setMode(e.target.value)} disabled={busy}>
-        <option value="auto">Tự động chọn 20 từ đã học</option><option value="learned">Tự chọn từ đã học</option>
+        <option value="auto">Tự động chọn 20 từ đã học</option><option value="learned">Tự chọn từ đã học</option><option value="custom">Nhập từ muốn luyện</option>
       </select></label>
       {mode === "learned" && <fieldset disabled={busy}><legend>Từ đã học</legend>
         <p>Các từ bạn đã luyện tập hoặc ôn tập, theo tiến độ học hiện tại.</p>
+        <label htmlFor="learned-word-search">Tìm từ đã học</label>
+        <div className="speaking-search">
+          <input id="learned-word-search" type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Nhập từ tiếng Anh hoặc nghĩa tiếng Việt…" />
+          {query && <button type="button" className="btn" onClick={() => setQuery("")}>Xóa tìm kiếm</button>}
+        </div>
+        <p role="status">{filteredWords.length}/{words.length} từ · Đã chọn {selected.length}/20</p>
         {!words.length && <p>Bạn chưa có từ đã học. Hãy học thêm từ rồi quay lại nhé.</p>}
-        <div className="speaking-words">{words.map(w => <label key={w.id}>
-          <input type="checkbox" checked={selected.includes(w.id)} onChange={e => setSelected(prev => e.target.checked ? [...prev, w.id] : prev.filter(id => id !== w.id))} />
+        {words.length > 0 && !filteredWords.length && <p>Không tìm thấy từ phù hợp. Hãy thử từ khóa khác.</p>}
+        <div className="speaking-words">{filteredWords.map(w => <label key={w.id}>
+          <input type="checkbox" checked={selected.includes(w.id)} disabled={selected.length >= 20 && !selected.includes(w.id)} onChange={e => setSelected(prev => e.target.checked ? [...prev, w.id] : prev.filter(id => id !== w.id))} />
           <strong>{w.word}</strong> {w.meaning}
         </label>)}</div>
       </fieldset>}
-      {mode === "auto" ? <p>Bài luyện sẽ chọn 20 từ trong số những từ bạn đã học, ưu tiên từ cần ôn thêm. Nếu chưa đủ 20 từ, bạn sẽ luyện với số từ hiện có.</p> : <>
+      {mode === "custom" && <CustomSpeakingWords words={customWords} onChange={setCustomWords} disabled={busy} />}
+      {mode === "auto" ? <p>Bài luyện sẽ chọn 20 từ trong số những từ bạn đã học, ưu tiên từ cần ôn thêm. Nếu chưa đủ 20 từ, bạn sẽ luyện với số từ hiện có.</p> : mode === "learned" && <>
         <h3>Danh sách xem trước</h3>
         <p>{words.filter(w => selected.includes(w.id)).map(w => w.word).join(" · ") || "Chưa chọn từ."}</p>
         <p>Chọn tối đa 20 từ cho mỗi bài luyện.</p>
       </>}
       {!words.length && mode === "auto" && <p>Hãy học một số từ trước khi tạo bài luyện nói.</p>}
-      <button className="btn btn-primary" disabled={busy || !words.length || (mode === "learned" && (!selected.length || selected.length > 20))} onClick={create}>{busy ? "Đang chuẩn bị bài luyện…" : mode === "auto" ? "Chọn từ và bắt đầu luyện" : "Tạo bài luyện nói"}</button>
+      <button className="btn btn-primary" disabled={busy || (mode === "custom" ? !customWords.length : !words.length) || (mode === "learned" && (!selected.length || selected.length > 20))} onClick={create}>{busy ? "Đang chuẩn bị bài luyện…" : mode === "auto" ? "Chọn từ và bắt đầu luyện" : "Tạo bài luyện nói"}</button>
     </div> : <div className="speaking-card">
       <p>Mục {index + 1}/{exercise.items.length} · {exercise.items[index].source === "custom" ? "Từ tự chọn" : "Từ đã học"}</p>
       <h2 className="speaking-target">{exercise.items[index].text}</h2>

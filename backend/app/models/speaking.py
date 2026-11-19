@@ -3,6 +3,11 @@ import re
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+class WordCheckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    word: str = Field(min_length=1, max_length=80)
+
+
 class SpeakingRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     vocabulary_ids: list[str] = Field(default_factory=list, max_length=20)
