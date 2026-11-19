@@ -6,6 +6,7 @@ import { domainOf, myDomains, formatApiError } from "../constants/domains";
 import { computeLevelProgress } from "../constants/levels";
 import { EmptyState, PageError, PageLoading, SectionHeading, StatTile } from "../components/PageState";
 import DailyPlanCard from "../components/DailyPlanCard";
+import AIStudyCoachCard from "../components/AIStudyCoachCard";
 import { useAuth } from "../hooks/useAuth";
 
 export default function DashboardPage() {
@@ -97,7 +98,6 @@ export default function DashboardPage() {
           </div>}
           <div className="sv-hero-actions">
             <Link className="sv-btn sv-btn-light" to={nextLesson ? `/lessons/${nextLesson.slug || nextLesson.id}?unit=${nextLesson.next_unit || 1}` : "/learn"}>Tiếp tục học <span>→</span></Link>
-            <Link className="sv-btn sv-btn-ghost-light" to="/flashcards">Ôn tập FSRS</Link>
           </div>
         </div>
         <div className="sv-hero-art" aria-hidden="true"><div className="sv-art-orbit sv-art-orbit-one"/><div className="sv-art-orbit sv-art-orbit-two"/><div className="sv-art-card sv-art-card-one"><span>Meaning</span><b>◎</b></div><div className="sv-art-card sv-art-card-two"><span>Spelling</span><b>✦</b></div><div className="sv-art-card sv-art-card-three"><span>Context</span><b>▤</b></div></div>
@@ -108,6 +108,7 @@ export default function DashboardPage() {
       {!state.loading && !state.error && <>
         {state.secondaryError && <div className="sv-notice" role="status">{state.secondaryError} <button type="button" onClick={() => setRefresh((value) => value + 1)}>Tải lại</button></div>}
 
+        <AIStudyCoachCard plan={state.daily} nextLesson={nextLesson} />
         <DailyPlanCard plan={state.daily} />
 
         <div className="sv-stats-grid">

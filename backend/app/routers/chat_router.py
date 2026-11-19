@@ -24,6 +24,8 @@ async def create_chat_message(
             history=[item.model_dump() for item in data.history],
             user=user,
             page=data.context.page,
+            intent=data.context.intent,
+            selected_text=data.context.selected_text,
         )
     except ai_service.AIQuotaError as exc:
         raise HTTPException(
