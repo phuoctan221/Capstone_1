@@ -35,6 +35,9 @@ COLLECTIONS = (
     "lesson_progress",
     "fsrs_review_logs",
     "quiz_questions",
+    "level_assessment_attempts",
+    "level_assessment_results",
+    "password_reset_otps",
     "flashcard_progress",
 )
 

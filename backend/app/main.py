@@ -1,9 +1,11 @@
 from app.routers import speaking_router
+from app.routers import story_router
 from contextlib import asynccontextmanager
 import asyncio
 import logging
+from time import perf_counter
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -18,6 +20,7 @@ from app.routers import (
     domain_router,
     admin_router,
     chat_router,
+    assessment_router,
 )
 
 logger = logging.getLogger("uvicorn.error")
@@ -70,11 +73,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def log_slow_requests(request: Request, call_next):
+    started = perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (perf_counter() - started) * 1000
+    if elapsed_ms >= 300:
+        logger.warning(
+            "Slow request: %s %s -> %s in %.1fms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
+    return response
+
 uploads_dir = BASE_DIR / "uploads"
 uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 app.include_router(speaking_router.router)
+app.include_router(story_router.router)
 app.include_router(auth_router.router)
 app.include_router(vocabulary_router.router)
 app.include_router(vocabulary_router.alias_router)
@@ -84,6 +104,7 @@ app.include_router(lesson_router.router)
 app.include_router(progress_router.router)
 app.include_router(admin_router.router)
 app.include_router(chat_router.router)
+app.include_router(assessment_router.router)
 
 
 @app.get("/health", tags=["health"])

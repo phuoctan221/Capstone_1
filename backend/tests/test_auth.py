@@ -87,6 +87,22 @@ class AuthTests(ApiTestCase):
         self.assertTrue(body["onboarded"])
         self.assertIsNotNone(body["profile_completed_at"])
 
+    async def test_onboarding_b1_opens_b1_and_marks_lower_levels_as_review(self):
+        headers = await self.auth_headers()
+        response = await self.client.post(
+            "/auth/onboarding",
+            json={"learning_level": "B1", "interests": ["general"]},
+            headers=headers,
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["placement_levels"], {"general": "B1"})
+
+        lessons = await self.client.get("/lessons", headers=headers)
+        self.assertEqual(lessons.status_code, 200, lessons.text)
+        by_id = {lesson["id"]: lesson for lesson in lessons.json()}
+        self.assertTrue(by_id["general-a1"]["review_only"])
+        self.assertTrue(by_id["general-a2"]["review_only"])
+
     async def test_user_can_upload_png_avatar(self):
         headers = await self.auth_headers()
         response = await self.client.post(

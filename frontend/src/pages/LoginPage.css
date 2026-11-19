@@ -230,6 +230,8 @@
   font-size: 13px;
   line-height: 1.5;
 }
+.auth-message { padding: 11px 13px; border-radius: 10px; border: 1px solid #bde9d4; background: #effbf5; color: #18734e; font-size: 13px; line-height: 1.5; }
+.auth-forgot { margin: -8px 0 15px; text-align: right; font-size: 12px; }.auth-forgot a { color: #5948d2; font-weight: 700; text-decoration: none; }.auth-forgot a:hover { text-decoration: underline; }
 
 .auth-separator {
   display: flex;

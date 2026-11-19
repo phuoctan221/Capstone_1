@@ -1,13 +1,13 @@
 .sv-confirm-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 1000;
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(14, 26, 51, 0.48);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(14, 26, 51, 0.6);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
   animation: sv-confirm-fade 0.18s ease both;
 }
 

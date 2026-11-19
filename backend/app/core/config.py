@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.8-flash"
     GEMINI_RPM: int = 10
+    MISTRAL_API_KEY: str = ""
+    MISTRAL_MODEL: str = "mistral-small-latest"
 
     CF_ACCOUNT_ID: str = ""
     CF_API_TOKEN: str = ""
@@ -60,6 +62,22 @@ class Settings(BaseSettings):
 
     SESSION_MAX_QUESTIONS: int = 20
     MIN_LESSON_WORDS: int = 4
+
+    ASSESSMENT_QUESTION_COUNT: int = 15
+    ASSESSMENT_PASS_PERCENT: int = 70
+    ASSESSMENT_EXPIRE_MINUTES: int = 30
+    ASSESSMENT_RETRY_COOLDOWN_MINUTES: int = 5
+
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_APP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_FROM_NAME: str = "SmartVOCAB AI"
+    PASSWORD_RESET_OTP_TTL_MINUTES: int = 10
+    PASSWORD_RESET_OTP_MAX_ATTEMPTS: int = 5
+    PASSWORD_RESET_SEND_COOLDOWN_SECONDS: int = 60
+    PASSWORD_RESET_MAX_SENDS_PER_HOUR: int = 5
 
     @model_validator(mode="after")
     def _require_mongo_uri(self) -> "Settings":

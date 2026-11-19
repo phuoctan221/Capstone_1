@@ -10,8 +10,11 @@ from app.models.user import (
     OnboardingRequest,
     UserProfileUpdate,
     ChangePasswordRequest,
+    PasswordResetRequest,
+    PasswordResetVerify,
+    PasswordResetConfirm,
 )
-from app.services import auth_service, avatar_service
+from app.services import auth_service, avatar_service, lesson_service, password_reset_service
 from app.db.mongodb import get_database
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -35,6 +38,7 @@ def _user_out(user: dict) -> dict:
         "role": auth_service.normalize_role(user.get("role")),
         "created_at": user.get("created_at") or datetime.now(timezone.utc),
         "learning_level": user.get("learning_level"),
+        "placement_levels": user.get("placement_levels") or {},
         "interests": user.get("interests") or [],
         "onboarded": bool(user.get("onboarded")),
         "daily_goal": user.get("daily_goal") or 10,
@@ -147,6 +151,11 @@ async def update_me(
                 detail="Vui long chon it nhat mot linh vuc quan tam",
             )
         updates["interests"] = interests
+    if data.learning_level is not None:
+        placement_interests = updates.get("interests", user.get("interests") or [])
+        updates["placement_levels"] = lesson_service.placement_levels_for_interests(
+            placement_interests, data.learning_level
+        )
     if data.daily_goal is not None:
         updates["daily_goal"] = int(data.daily_goal)
     if data.daily_new_limit is not None:
@@ -189,6 +198,9 @@ async def complete_onboarding(
     updates = {
         "learning_level": data.learning_level,
         "interests": interests,
+        "placement_levels": lesson_service.placement_levels_for_interests(
+            interests, data.learning_level
+        ),
         "onboarded": True,
         "profile_completed_at": now,
         "updated_at": now,
@@ -228,3 +240,28 @@ async def change_password(
         "access_token": token,
         "token_type": "bearer",
     }
+
+
+@router.post("/password-reset/request")
+async def request_password_reset(data: PasswordResetRequest):
+    # Keep this neutral to avoid account enumeration. SMTP failures are logged by
+    # deployment monitoring rather than exposed as an account-existence signal.
+    try:
+        await password_reset_service.request_reset(data.email)
+    except Exception:
+        pass
+    return {"message": "If that email is registered, a verification code has been sent."}
+
+
+@router.post("/password-reset/verify")
+async def verify_password_reset(data: PasswordResetVerify):
+    if not await password_reset_service.verify_reset(data.email, data.otp):
+        raise HTTPException(status_code=400, detail="Invalid, expired, or locked verification code")
+    return {"verified": True}
+
+
+@router.post("/password-reset/confirm")
+async def confirm_password_reset(data: PasswordResetConfirm):
+    if not await password_reset_service.confirm_reset(data.email, data.otp, data.new_password):
+        raise HTTPException(status_code=400, detail="Invalid, expired, or locked verification code")
+    return {"message": "Password reset successfully. Please sign in again."}

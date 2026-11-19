@@ -1,4 +1,5 @@
 import SpeakingPage from "./pages/SpeakingPage";
+import StoryGamePage from "./pages/StoryGamePage";
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar";
@@ -6,6 +7,8 @@ import ChatWidget from "./components/ChatWidget";
 import AdminLayout from "./components/AdminLayout";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import AssessmentPage from "./pages/AssessmentPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProgressPage from "./pages/ProgressPage";
 import LearnPage from "./pages/LearnPage";
@@ -116,18 +119,22 @@ export default function App() {
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
       <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
+      <Route path="/forgot-password" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
 
       <Route path="/onboarding/level" element={<OnboardingRoute><OnboardingLevelPage /></OnboardingRoute>} />
       <Route path="/onboarding/interests" element={<OnboardingRoute><OnboardingInterestsPage /></OnboardingRoute>} />
 
       <Route element={<UserLayout />}>
         <Route path="/speaking" element={<SpeakingPage />} />
+        <Route path="/games" element={<Navigate to="/games/story" replace />} />
+        <Route path="/games/story" element={<StoryGamePage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/learn" element={<LearnPage />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/lessons/:lessonId" element={<LessonPage />} />
         <Route path="/lessons/:lessonId/practice/:skill" element={<PracticePage />} />
         <Route path="/lessons/:lessonId/quiz" element={<QuizPage />} />
+        <Route path="/assessments/:domain/:level" element={<AssessmentPage />} />
         <Route path="/flashcards" element={<FlashcardsPage />} />
         <Route path="/vocabulary" element={<VocabularyPage />} />
         <Route path="/profile" element={<ProfilePage />} />

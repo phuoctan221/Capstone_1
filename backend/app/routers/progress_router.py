@@ -22,6 +22,11 @@ async def mastery(user: dict = Depends(get_current_user)):
     return await progress_service.get_mastery_breakdown(user["id"])
 
 
+@router.get("/assessment-status")
+async def assessment_status(user: dict = Depends(get_current_user)):
+    return await progress_service.get_assessment_status(user["id"])
+
+
 @router.get("/history")
 async def history(
     limit: int = Query(50, ge=1, le=200),

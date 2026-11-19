@@ -7,6 +7,7 @@ I study today?". Dates are bucketed in the learner's local timezone using the
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import date, datetime, timedelta, timezone
 
 from bson import ObjectId
@@ -66,7 +67,10 @@ async def _new_word_candidates(user: dict, limit: int) -> list[dict]:
     if limit <= 0:
         return []
     db = get_database()
-    started = await _started_ids(user["_id"])
+    user_id = str(user.get("_id") or user.get("id") or "")
+    if not user_id:
+        raise ValueError("User not found")
+    started = await _started_ids(user_id)
     exclude = [ObjectId(value) for value in started if ObjectId.is_valid(value)]
     clauses: list[dict] = []
     for domain in _interest_domains(user):
@@ -158,10 +162,13 @@ async def _activity(user_id: str, now: datetime, tz_offset: int) -> dict:
     return {"today": today_bucket, "week": week}
 
 
-async def get_daily_plan(user_id: str, tz_offset: int = 0) -> dict:
+async def get_daily_plan(
+    user_id: str, tz_offset: int = 0, user: dict | None = None
+) -> dict:
     db = get_database()
     now = datetime.now(timezone.utc)
-    user = await db[USERS].find_one({"_id": user_id})
+    if user is None:
+        user = await db[USERS].find_one({"_id": user_id})
     if not user:
         raise ValueError("User not found")
 
@@ -170,20 +177,19 @@ async def get_daily_plan(user_id: str, tz_offset: int = 0) -> dict:
     review_limit = max(
         int(user.get("daily_review_limit") or DEFAULT_REVIEW_LIMIT), 1
     )
-    activity = await _activity(user_id, now, tz_offset)
+    activity, due_count, due_cards = await asyncio.gather(
+        _activity(user_id, now, tz_offset),
+        db[STATES].count_documents(
+            {
+                "user_id": user_id,
+                "fsrs.due_at": {"$lte": now},
+                **learning_service.STUDIED_FILTER,
+            }
+        ),
+        learning_service.get_due_cards(user_id, limit=min(review_limit, PREVIEW_LIMIT)),
+    )
     today = activity["today"]
     studied_today = today["studied"]
-
-    due_count = await db[STATES].count_documents(
-        {
-            "user_id": user_id,
-            "fsrs.due_at": {"$lte": now},
-            **learning_service.STUDIED_FILTER,
-        }
-    )
-    due_cards = await learning_service.get_due_cards(
-        user_id, limit=min(review_limit, PREVIEW_LIMIT)
-    )
 
     remaining = max(goal - studied_today, 0)
     candidates = await _new_word_candidates(user, min(remaining, new_limit))

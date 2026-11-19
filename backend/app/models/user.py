@@ -20,6 +20,7 @@ class UserOut(BaseModel):
     role: str = "user"
     created_at: datetime
     learning_level: str | None = None
+    placement_levels: dict[str, str] = {}
     interests: list[str] = []
     onboarded: bool = False
     daily_goal: int = 10
@@ -49,6 +50,19 @@ class OnboardingRequest(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=6)
+
+
+class PasswordResetRequest(BaseModel):
+    email: str = Field(..., pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$")
+
+
+class PasswordResetVerify(BaseModel):
+    email: str = Field(..., pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$")
+    otp: str = Field(..., pattern=r"^\d{6}$")
+
+
+class PasswordResetConfirm(PasswordResetVerify):
     new_password: str = Field(..., min_length=6)
 
 

@@ -24,3 +24,9 @@ export async function fetchDailyPlan() {
   const { data } = await api.get("/learning/daily", { params: { tz_offset: tzOffset } });
   return data;
 }
+
+export async function fetchDashboard() {
+  const tzOffset = -new Date().getTimezoneOffset();
+  const { data } = await api.get("/learning/dashboard", { params: { tz_offset: tzOffset } });
+  return data;
+}

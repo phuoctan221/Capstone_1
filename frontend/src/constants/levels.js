@@ -28,7 +28,9 @@ export function computeLevelProgress(lessons, domains) {
       .sort((a, b) => levelRank(a) - levelRank(b));
     if (!domainLessons.length) continue;
 
-    const target = domainLessons.find((lesson) => !lesson.completed);
+    const target = domainLessons.find(
+      (lesson) => !lesson.completed || lesson.assessment_required,
+    );
 
     if (!target) {
       items.push({
@@ -49,7 +51,9 @@ export function computeLevelProgress(lessons, domains) {
 
     const targetTotal = Number(target.word_count) || 0;
     const targetLearned = Math.min(Number(target.learned_count) || 0, targetTotal);
-    const targetRemaining = Math.max(targetTotal - targetLearned, 0);
+    const targetRemaining = target.completed
+      ? 0
+      : Math.max(targetTotal - targetLearned, 0);
     remaining += targetRemaining;
     learned += targetLearned;
     total += targetTotal;
@@ -65,7 +69,10 @@ export function computeLevelProgress(lessons, domains) {
       total: targetTotal,
       learned: targetLearned,
       completed: false,
-      href: `/lessons/${target.slug || target.id}?unit=${target.next_unit || 1}`,
+      assessmentRequired: Boolean(target.assessment_required),
+      href: target.assessment_required
+        ? `/assessments/${target.domain || target.topic}/${target.level}`
+        : `/lessons/${target.slug || target.id}?unit=${target.next_unit || 1}`,
     });
   }
 
@@ -86,6 +93,7 @@ export function computeLevelProgress(lessons, domains) {
     items,
     targetLevel: targetLevels.length === 1 ? targetLevels[0] : null,
     nextLevel: nextLevels.length === 1 ? nextLevels[0] : null,
+    assessmentRequired: active.some((item) => item.assessmentRequired),
     allCompleted: active.length === 0,
     href: cta?.href || "/learn",
   };

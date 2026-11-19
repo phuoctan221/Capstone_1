@@ -110,3 +110,18 @@ export async function changePassword(payload) {
   }
   return data;
 }
+
+export async function requestPasswordReset(email) {
+  const { data } = await api.post("/auth/password-reset/request", { email });
+  return data;
+}
+
+export async function verifyPasswordReset(email, otp) {
+  const { data } = await api.post("/auth/password-reset/verify", { email, otp });
+  return data;
+}
+
+export async function confirmPasswordReset(email, otp, newPassword) {
+  const { data } = await api.post("/auth/password-reset/confirm", { email, otp, new_password: newPassword });
+  return data;
+}

@@ -6,6 +6,7 @@ the whole catalogue; it only returns already-started words that are due.
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -217,23 +218,23 @@ async def get_due_cards(user_id: str, limit: int = 100) -> list[dict]:
 async def get_stats(user_id: str) -> dict:
     db = get_database()
     now = datetime.now(timezone.utc)
-    total = await db[COLLECTION].count_documents(
-        {"user_id": user_id, **STUDIED_FILTER}
-    )
-    mastered = await db[COLLECTION].count_documents(
-        {
-            "user_id": user_id,
-            "mastery.meaning": {"$gte": settings.MASTERY_THRESHOLD},
-            "mastery.spelling": {"$gte": settings.MASTERY_THRESHOLD},
-            "mastery.context": {"$gte": settings.MASTERY_THRESHOLD},
-        }
-    )
-    due = await db[COLLECTION].count_documents(
-        {
-            "user_id": user_id,
-            "fsrs.due_at": {"$lte": now},
-            **STUDIED_FILTER,
-        }
+    total, mastered, due = await asyncio.gather(
+        db[COLLECTION].count_documents({"user_id": user_id, **STUDIED_FILTER}),
+        db[COLLECTION].count_documents(
+            {
+                "user_id": user_id,
+                "mastery.meaning": {"$gte": settings.MASTERY_THRESHOLD},
+                "mastery.spelling": {"$gte": settings.MASTERY_THRESHOLD},
+                "mastery.context": {"$gte": settings.MASTERY_THRESHOLD},
+            }
+        ),
+        db[COLLECTION].count_documents(
+            {
+                "user_id": user_id,
+                "fsrs.due_at": {"$lte": now},
+                **STUDIED_FILTER,
+            }
+        ),
     )
     return {
         "total_words": total,
