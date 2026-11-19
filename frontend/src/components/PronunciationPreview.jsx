@@ -1,5 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 
+// Speech engines interpret rate differently; use a stronger reduction for short words.
+const SLOW_RATE = 0.35;
+
 export default function PronunciationPreview({ text, disabled }) {
   const [voices, setVoices] = useState([]);
   const [playing, setPlaying] = useState(false);
@@ -46,7 +49,9 @@ export default function PronunciationPreview({ text, disabled }) {
     if (!supported || disabled) return;
     // Re-read because some browsers load installed voices only after interaction.
     const available = window.speechSynthesis.getVoices().filter(v => /^en([-_]|$)/i.test(v.lang));
-    const voice = available.find(v => v.localService && /^en[-_]US$/i.test(v.lang))
+    const localVoices = available.filter(v => v.localService && !/natural|online/i.test(v.name));
+    const voice = localVoices.find(v => /^en[-_]US$/i.test(v.lang))
+      || localVoices[0]
       || available.find(v => /^en[-_]US$/i.test(v.lang)) || available[0];
     if (!voice) {
       setError("Chưa tìm thấy giọng tiếng Anh. Hãy bật/cài giọng English trong thiết bị hoặc thử trình duyệt khác.");
@@ -95,7 +100,7 @@ export default function PronunciationPreview({ text, disabled }) {
     <p>Nghe từ/cụm từ trên bằng giọng tiếng Anh trước khi luyện nói.</p>
     <div className="speaking-actions">
       <button type="button" className="btn" disabled={disabled || !supported} onClick={() => play(1)}>▶ Nghe mẫu</button>
-      <button type="button" className="btn" disabled={disabled || !supported} aria-pressed={playing && playbackRate < 1} onClick={() => play(0.55)}>Nghe chậm (0,55×)</button>
+      <button type="button" className="btn" disabled={disabled || !supported} aria-pressed={playing && playbackRate < 1} onClick={() => play(SLOW_RATE)}>Nghe chậm</button>
       {playing && <button type="button" className="btn" onClick={stop}>Dừng nghe</button>}
     </div>
     <div className="pronunciation-volume">

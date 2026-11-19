@@ -179,7 +179,7 @@ export default function SpeakingPage() {
         {result.status !== "retry" && <>
           {result.provider === "chivox" && result.pronunciation != null && <p>Điểm phát âm: {result.pronunciation}/100</p>}
         </>}
-        <SpeakingFeedback result={result} disabled={busy} />
+        <SpeakingFeedback result={result} />
       </div>}
     </div>}
   </section>;
