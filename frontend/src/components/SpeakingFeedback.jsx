@@ -1,5 +1,3 @@
-import PronunciationPreview from "./PronunciationPreview";
-
 const validScore = value => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100;
 const level = score => score < 60 ? "Cần luyện thêm" : score < 80 ? "Cần đọc rõ hơn" : "Đọc tốt";
 const soundKey = value => typeof value === "string" ? value.trim().toLowerCase().replace(/[012]$/, "") : "";
@@ -15,7 +13,7 @@ function phoneFeedback(phone) {
   return { ...phone, compared, differs, scored, weak: differs || (scored && phone.quality_score < 80) };
 }
 
-export default function SpeakingFeedback({ result, disabled }) {
+export default function SpeakingFeedback({ result }) {
   if (result.status === "retry") {
     return <div className="speaking-feedback">
       <h4>Cách luyện lại</h4>
@@ -53,7 +51,6 @@ export default function SpeakingFeedback({ result, disabled }) {
           : allMatched ? <p>Bạn đã đọc khớp các âm trong từ “{word.word}”. Chưa ghi nhận âm cần sửa trong lần đọc này. Hãy luyện nói cả từ liền mạch rồi đặt vào một cụm ngắn.</p>
           : score !== null && score >= 80 ? <p>Tiếp tục giữ cách đọc rõ ràng và luyện từ này trong một cụm ngắn.</p>
           : <p>Chưa có đủ nhận xét từng âm. Hãy nghe mẫu rồi đọc lại để so sánh.</p>}
-        {(weak.length > 0 || (score !== null && score < 80)) && <PronunciationPreview text={word.word} disabled={disabled} />}
       </article>;
     })}
     {words.some(w => validScore(w.quality_score) || w.phone_score_list?.some(p => validScore(p.quality_score))) && <p className="speaking-feedback-note">Gợi ý luyện tập: dưới 60 điểm cần luyện thêm; 60–79 cần đọc rõ hơn; từ 80 là đọc tốt.</p>}

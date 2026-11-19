@@ -14,7 +14,7 @@ class ChatTests(ApiTestCase):
         headers = await self.auth_headers()
         with patch.object(chat_router, "limit", AsyncMock()), patch(
             "app.services.chat_service.ai_service._call_ai",
-            AsyncMock(return_value="Bạn có thể dùng **say** khi tập trung vào nội dung lời nói."),
+            AsyncMock(return_value='{"message":"Bạn có thể dùng say khi tập trung vào nội dung lời nói.","suggestions":["Cho ví dụ"]}'),
         ) as call_ai:
             response = await self.client.post(
                 "/chat/messages",
@@ -28,20 +28,46 @@ class ChatTests(ApiTestCase):
         self.assertEqual(response.status_code, 200, response.text)
         body = response.json()
         self.assertIn("say", body["message"])
-        self.assertEqual(len(body["suggestions"]), 3)
-        self.assertFalse(call_ai.await_args.kwargs["expect_json"])
+        self.assertEqual(body["suggestions"], ["Cho ví dụ"])
+        self.assertTrue(call_ai.await_args.kwargs["expect_json"])
 
     async def test_chat_unwraps_legacy_response_json_without_showing_response_label(self):
         headers = await self.auth_headers()
         with patch.object(chat_router, "limit", AsyncMock()), patch(
             "app.services.chat_service.ai_service._call_ai",
-            AsyncMock(return_value='{"response":"Nội dung trả lời dành cho người học."}'),
+            AsyncMock(return_value='{"message":"Nội dung trả lời dành cho người học."}'),
         ):
             response = await self.client.post(
                 "/chat/messages", json={"message": "Giải thích thì hiện tại"}, headers=headers
             )
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.json()["message"], "Nội dung trả lời dành cho người học.")
+
+    async def test_chat_rejects_unknown_intent(self):
+        headers = await self.auth_headers()
+        response = await self.client.post(
+            "/chat/messages",
+            json={"message": "Giúp mình học", "context": {"page": "dashboard", "intent": "admin_action"}},
+            headers=headers,
+        )
+        self.assertEqual(response.status_code, 422, response.text)
+
+    async def test_study_plan_uses_database_snapshot_and_returns_internal_action(self):
+        headers = await self.auth_headers()
+        with patch.object(chat_router, "limit", AsyncMock()), patch(
+            "app.services.chat_service.ai_service._call_ai",
+            AsyncMock(return_value='{"message":"Hãy ôn trước các từ đến hạn.","suggestions":[]}'),
+        ) as call_ai:
+            response = await self.client.post(
+                "/chat/messages",
+                json={"message": "Hôm nay nên học gì?", "context": {"page": "dashboard", "intent": "study_plan"}},
+                headers=headers,
+            )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["action_href"], "/learn")
+        prompt = call_ai.await_args.args[0]
+        self.assertIn("learning_snapshot", prompt)
+        self.assertIn("daily_goal", prompt)
 
     async def test_chat_maps_ai_quota_to_429(self):
         headers = await self.auth_headers()

@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from app.core.config import settings
 from app.db.mongodb import get_database
 from app.models.speaking import SpeakingRequest
+from app.services.word_validation_service import validate_custom_words
 
 
 async def learned_words(user_id: str):
@@ -23,6 +24,8 @@ async def learned_words(user_id: str):
 
 
 async def create_exercise(user_id: str, data: SpeakingRequest):
+    if data.custom_words:
+        await validate_custom_words(data.custom_words)
     available = {w["id"]: w for w in await learned_words(user_id)}
     if data.auto_select:
         if data.vocabulary_ids or data.custom_words:

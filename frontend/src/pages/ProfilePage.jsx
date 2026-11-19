@@ -56,6 +56,9 @@ export default function ProfilePage() {
   const [pwError, setPwError] = useState("");
   const [pwOk, setPwOk] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const [avatarMessage, setAvatarMessage] = useState("");
+  const [avatarError, setAvatarError] = useState("");
 
   useEffect(() => {
     setProfile(user);
@@ -91,6 +94,12 @@ export default function ProfilePage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    };
+  }, [avatarPreviewUrl]);
 
   const save = async (event) => {
     event.preventDefault();
@@ -184,24 +193,27 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || uploadingAvatar) return;
+    setAvatarError("");
+    setAvatarMessage("");
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      setError("Chỉ hỗ trợ ảnh PNG, JPG hoặc WebP.");
+      setAvatarError("Chỉ hỗ trợ ảnh PNG, JPG hoặc WebP.");
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setError("Ảnh đại diện không được lớn hơn 2 MB.");
+      setAvatarError("Ảnh đại diện không được lớn hơn 2 MB.");
       return;
     }
+    setAvatarPreviewUrl(URL.createObjectURL(file));
     setUploadingAvatar(true);
-    setError("");
-    setOk("");
     try {
       const updated = await uploadAvatar(file);
       setProfile(updated);
-      setOk("Đã cập nhật ảnh đại diện.");
+      setAvatarPreviewUrl("");
+      setAvatarMessage("Ảnh đại diện đã được cập nhật.");
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Không thể tải ảnh đại diện. Vui lòng thử lại.");
+      setAvatarPreviewUrl("");
+      setAvatarError(typeof detail === "string" ? detail : "Không thể tải ảnh đại diện. Vui lòng thử lại.");
     } finally {
       setUploadingAvatar(false);
     }
@@ -211,16 +223,33 @@ export default function ProfilePage() {
   const email = profile?.email || user?.email || "";
   const level = profile?.learning_level || user?.learning_level || progress?.level;
   const interests = Array.isArray(profile?.interests) ? profile.interests : user?.interests || [];
+  const avatarUser = avatarPreviewUrl ? { ...(profile || user), avatar_url: avatarPreviewUrl } : profile || user;
 
   return (
     <div className="profile-page">
       <div className="profile-top">
         <div className="profile-top-left">
-          <div className="profile-avatar-wrap"><UserAvatar user={profile || user} className="profile-avatar-large" alt={`Ảnh đại diện của ${displayName}`} /><label className="profile-avatar-upload">{uploadingAvatar ? "Đang tải..." : "Đổi ảnh"}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={changeAvatar} disabled={uploadingAvatar} /></label></div>
+          <div className="profile-avatar-wrap">
+            <UserAvatar user={avatarUser} className="profile-avatar-large" alt={`Ảnh đại diện của ${displayName}`} />
+            <label className="profile-avatar-upload">
+              <span aria-hidden="true">⌁</span>
+              {uploadingAvatar ? "Đang tải" : "Thay ảnh"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={changeAvatar}
+                disabled={uploadingAvatar}
+              />
+            </label>
+          </div>
           <div className="profile-top-info">
+            <span className="profile-eyebrow">Hồ sơ học viên</span>
             <h2>{displayName}</h2>
             <p className="profile-top-meta">{email}</p>
             <p className="profile-top-meta">Ngày tham gia: {formatDate(profile?.created_at)}</p>
+            <p className="profile-avatar-help">PNG, JPG hoặc WebP · Tối đa 2 MB · Nên dùng ảnh vuông</p>
+            {avatarError && <p className="profile-avatar-error" role="alert">{avatarError}</p>}
+            {avatarMessage && <p className="profile-avatar-success" role="status">{avatarMessage}</p>}
           </div>
         </div>
       </div>
@@ -377,75 +406,75 @@ export default function ProfilePage() {
             </div>
           </div>
 
-        </div>
-      </div>
+          <div className="card profile-password-card">
+            <div className="profile-card-header">
+              <h3>Đổi mật khẩu</h3>
+            </div>
+            <form onSubmit={savePassword} className="profile-password-form">
+              <div className="profile-password-grid">
+                <div className="form-group">
+                  <label htmlFor="current-password">Mật khẩu hiện tại</label>
+                  <input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value);
+                      setPwError("");
+                      setPwOk("");
+                    }}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="new-password">Mật khẩu mới</label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      setPwError("");
+                      setPwOk("");
+                    }}
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="confirm-password">Xác nhận mật khẩu mới</label>
+                  <input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setPwError("");
+                      setPwOk("");
+                    }}
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+              {pwError && <p className="auth-error" role="alert">{pwError}</p>}
+              {pwOk && <p className="profile-success">{pwOk}</p>}
+              <div className="profile-form-actions">
+                <button className="profile-btn-primary" type="submit" disabled={changingPw}>
+                  {changingPw ? (
+                    <>
+                      <span className="btn-spinner" aria-hidden="true" />
+                      Đang đổi...
+                    </>
+                  ) : (
+                    "Đổi mật khẩu"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
 
-      <div className="card profile-password-card">
-        <div className="profile-card-header">
-          <h3>Đổi mật khẩu</h3>
         </div>
-        <form onSubmit={savePassword} className="profile-password-form">
-          <div className="profile-password-grid">
-            <div className="form-group">
-              <label htmlFor="current-password">Mật khẩu hiện tại</label>
-              <input
-                id="current-password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => {
-                  setCurrentPassword(e.target.value);
-                  setPwError("");
-                  setPwOk("");
-                }}
-                autoComplete="current-password"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="new-password">Mật khẩu mới</label>
-              <input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => {
-                  setNewPassword(e.target.value);
-                  setPwError("");
-                  setPwOk("");
-                }}
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="confirm-password">Xác nhận mật khẩu mới</label>
-              <input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  setPwError("");
-                  setPwOk("");
-                }}
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </div>
-          </div>
-          {pwError && <p className="auth-error" role="alert">{pwError}</p>}
-          {pwOk && <p className="profile-success">{pwOk}</p>}
-          <div className="profile-form-actions">
-            <button className="profile-btn-primary" type="submit" disabled={changingPw}>
-              {changingPw ? (
-                <>
-                  <span className="btn-spinner" aria-hidden="true" />
-                  Đang đổi...
-                </>
-              ) : (
-                "Đổi mật khẩu"
-              )}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );

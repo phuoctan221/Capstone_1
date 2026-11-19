@@ -1,5 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 
+// Speech engines interpret rate differently; use a stronger reduction for short words.
+const SLOW_RATE = 0.35;
+
 export default function PronunciationPreview({ text, disabled }) {
   const [voices, setVoices] = useState([]);
   const [playing, setPlaying] = useState(false);
@@ -8,9 +11,13 @@ export default function PronunciationPreview({ text, disabled }) {
   const volumeId = useId();
   const previousVolume = useRef(100);
   const active = useRef(null);
+  const pending = useRef(null);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const supported = typeof window.speechSynthesis !== "undefined" && typeof window.SpeechSynthesisUtterance !== "undefined";
 
   function stop() {
+    clearTimeout(pending.current);
+    pending.current = null;
     if (active.current) {
       active.current = null;
       window.speechSynthesis.cancel();
@@ -26,6 +33,7 @@ export default function PronunciationPreview({ text, disabled }) {
     synth.addEventListener("voiceschanged", refresh);
     return () => {
       synth.removeEventListener("voiceschanged", refresh);
+      clearTimeout(pending.current);
       if (active.current) { active.current = null; synth.cancel(); }
     };
   }, [supported]);
@@ -41,7 +49,10 @@ export default function PronunciationPreview({ text, disabled }) {
     if (!supported || disabled) return;
     // Re-read because some browsers load installed voices only after interaction.
     const available = window.speechSynthesis.getVoices().filter(v => /^en([-_]|$)/i.test(v.lang));
-    const voice = available.find(v => /^en[-_]US$/i.test(v.lang)) || available[0];
+    const localVoices = available.filter(v => v.localService && !/natural|online/i.test(v.name));
+    const voice = localVoices.find(v => /^en[-_]US$/i.test(v.lang))
+      || localVoices[0]
+      || available.find(v => /^en[-_]US$/i.test(v.lang)) || available[0];
     if (!voice) {
       setError("Chưa tìm thấy giọng tiếng Anh. Hãy bật/cài giọng English trong thiết bị hoặc thử trình duyệt khác.");
       return;
@@ -52,6 +63,7 @@ export default function PronunciationPreview({ text, disabled }) {
     utterance.rate = rate;
     utterance.volume = playbackVolume / 100;
     active.current = utterance;
+    setPlaybackRate(rate);
     setPlaying(true);
     utterance.onend = () => {
       if (active.current === utterance) { active.current = null; setPlaying(false); }
@@ -62,7 +74,13 @@ export default function PronunciationPreview({ text, disabled }) {
       if (!["canceled", "interrupted"].includes(event.error)) setError("Không phát được âm mẫu. Kiểm tra âm lượng và thử lại.");
     };
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    // Let cancellation finish before switching speed or replaying a sample.
+    pending.current = setTimeout(() => {
+      pending.current = null;
+      if (active.current !== utterance) return;
+      window.speechSynthesis.resume();
+      window.speechSynthesis.speak(utterance);
+    }, 100);
   }
 
   function changeVolume(value) {
@@ -82,7 +100,7 @@ export default function PronunciationPreview({ text, disabled }) {
     <p>Nghe từ/cụm từ trên bằng giọng tiếng Anh trước khi luyện nói.</p>
     <div className="speaking-actions">
       <button type="button" className="btn" disabled={disabled || !supported} onClick={() => play(1)}>▶ Nghe mẫu</button>
-      <button type="button" className="btn" disabled={disabled || !supported} onClick={() => play(0.75)}>Nghe chậm</button>
+      <button type="button" className="btn" disabled={disabled || !supported} aria-pressed={playing && playbackRate < 1} onClick={() => play(SLOW_RATE)}>Nghe chậm</button>
       {playing && <button type="button" className="btn" onClick={stop}>Dừng nghe</button>}
     </div>
     <div className="pronunciation-volume">
@@ -93,7 +111,7 @@ export default function PronunciationPreview({ text, disabled }) {
       <input id={volumeId} type="range" min="0" max="100" step="5" value={volume} onChange={e => changeVolume(e.target.value)} disabled={disabled || !supported} aria-valuetext={`${volume}%`} />
       <output htmlFor={volumeId}>{volume}%</output>
     </div>
-    {playing && <p role="status">Đang phát âm mẫu…</p>}
+    {playing && <p role="status">{playbackRate < 1 ? "Đang phát âm chậm…" : "Đang phát âm mẫu…"}</p>}
     {!supported && <p role="status">Trình duyệt chưa hỗ trợ đọc mẫu. Hãy thử Chrome, Edge hoặc Safari.</p>}
     {supported && <small>Giọng đọc tổng hợp của thiết bị · {voices.some(v => /^en[-_]US$/i.test(v.lang)) ? "Tiếng Anh Mỹ" : "Tiếng Anh"}</small>}
     {error && <p role="alert" className="speaking-error">{error}</p>}

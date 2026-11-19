@@ -14,6 +14,14 @@ class ChatContext(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     page: str = Field("dashboard", min_length=1, max_length=80)
+    intent: Literal[
+        "general_question",
+        "study_plan",
+        "word_explanation",
+        "practice_generator",
+        "sentence_correction",
+    ] = "general_question"
+    selected_text: str | None = Field(None, max_length=120)
 
 
 class ChatMessageRequest(BaseModel):
@@ -27,3 +35,5 @@ class ChatMessageRequest(BaseModel):
 class ChatMessageResponse(BaseModel):
     message: str
     suggestions: list[str] = Field(default_factory=list)
+    action_label: str | None = Field(None, max_length=80)
+    action_href: str | None = Field(None, max_length=200)
