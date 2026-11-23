@@ -3,6 +3,8 @@
 > Cập nhật theo mã nguồn hiện tại (FastAPI + React + MongoDB Atlas + Mastery/FSRS).
 > Tài liệu cũ mô tả Leitner 5 hộp và `flashcard_progress` là luồng chính; hiện
 > `flashcard_progress` chỉ còn là dữ liệu legacy, luồng chính dùng **Mastery + FSRS**.
+> Ngoài luồng học lõi, codebase còn có speaking, story game, AI chat, level assessment
+> và self-service password reset; xem chi tiết ở [api-spec.md](api-spec.md).
 
 ## 1. Tổng quan kiến trúc
 
@@ -15,6 +17,7 @@ Dịch vụ AI (Google Gemini) là dependency ngoài.
 │ FRONTEND — React 18 + Vite (SPA)                             │
 │  pages/ → components/ → services/(Axios) → hooks/constants   │
 │  React Router: route theo role (user / admin) + guard        │
+│  Trang phụ: /speaking, /games/story, /assessments, ChatWidget │
 │  JWT trong localStorage, interceptor gắn Bearer, 401 → login │
 └───────────────────────────┬──────────────────────────────────┘
                             │ HTTP/JSON  (dev: Vite proxy /api)
@@ -23,7 +26,9 @@ Dịch vụ AI (Google Gemini) là dependency ngoài.
 │  routers/  →  services/  →  db/ (Motor async)                │
 │  models/ Pydantic · core/config.py (pydantic-settings)       │
 │  auth: JWT HS256 + bcrypt, RBAC role đọc từ MongoDB          │
-│  ai_service ───────────────► Google Gemini API (ngoài)       │
+│  ai_service ─► Gemini (chính) / Cloudflare Workers AI (fallback) │
+│  mistral_service ─► Mistral (story) · speechace/chivox (nói) │
+│  word_validation ─► dictionaryapi.dev + Datamuse             │
 └───────────────────────────┬──────────────────────────────────┘
                             │ Motor / MongoDB wire protocol
 ┌───────────────────────────▼──────────────────────────────────┐
@@ -31,6 +36,8 @@ Dịch vụ AI (Google Gemini) là dependency ngoài.
 │  users · domains · lessons · vocabularies · exercise_items   │
 │  learning_sessions · answer_attempts · user_word_states      │
 │  lesson_progress · fsrs_review_logs · quiz_questions         │
+│  story_games · speaking_exercises · level_assessment_*        │
+│  password_reset_otps · ai_rate_limits                        │
 │  flashcard_progress (legacy)                                 │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -45,8 +52,8 @@ tới 2 container FastAPI (`api1`, `api2`); cả hai dùng chung MongoDB Atlas. 
 Capstone_1/
 ├── frontend/                 # React 18 + Vite
 │   ├── src/
-│   │   ├── components/       # Navbar, AdminLayout, Flashcard, form...
-│   │   ├── pages/            # trang theo route (Learn, Practice, Admin...)
+│   │   ├── components/       # Navbar, AdminLayout, Flashcard, ChatWidget...
+│   │   ├── pages/            # Learn, Speaking, StoryGame, Assessment, Admin...
 │   │   ├── services/         # lớp gọi API (Axios) theo domain
 │   │   ├── hooks/            # useAuth
 │   │   ├── constants/        # domains, helper role
@@ -59,9 +66,9 @@ Capstone_1/
 │   │   ├── main.py           # app entry, lifespan, CORS, mount routers
 │   │   ├── core/             # config.py, domains.py
 │   │   ├── db/               # mongodb.py (Motor client + index)
-│   │   ├── models/           # Pydantic schemas
-│   │   ├── routers/          # API endpoints
-│   │   └── services/         # business logic
+│   │   ├── models/           # Pydantic schemas (incl. story, speaking, chat, assessment)
+│   │   ├── routers/          # API endpoints (incl. story, speaking, chat, assessment)
+│   │   └── services/         # business logic (incl. mistral, word_validation, chivox)
 │   ├── scripts/              # seed, migrate, create_admin, check_mongo...
 │   ├── tests/                # unittest
 │   ├── requirements.txt
@@ -85,8 +92,11 @@ Capstone_1/
 | Business logic | `app/services/*` | Auth, vocabulary, lesson, exercise, session, mastery, FSRS, progress, AI |
 | Schemas | `app/models/*` | Request/response Pydantic |
 
-Router hiện có: `/auth`, `/vocabulary` (+ alias `/vocabularies`), `/domains`,
-`/lessons`, `/learning`, `/progress`, `/admin`.
+Router hiện có: `/auth`, `/vocabulary` (+ alias GET `/vocabularies`), `/domains`,
+`/lessons`, `/learning`, `/progress`, `/admin`, `/speaking`, `/games/story`,
+`/chat`, `/assessments`. Mọi router trừ `/auth/register|login` và 3 endpoint reset
+mật khẩu đều dùng `Depends(get_current_user)`; riêng `/admin` dùng `require_admin`
+ở cấp router. `/uploads` là static mount cho avatar.
 
 ## 4. Xác thực & phân quyền
 
@@ -110,6 +120,11 @@ Client                       Backend
 - RBAC: chỉ giá trị `role === "admin"` mới có quyền; mọi `/admin/*` gắn
   `Depends(require_admin)`; token hợp lệ nhưng role `user` → `403`.
 - Đăng ký công khai luôn tạo `role = "user"`. Tạo admin qua `scripts/create_admin.py`.
+- Quên mật khẩu: OTP 6 chữ số lưu dạng hash HMAC trong `password_reset_otps`, gửi qua SMTP;
+  TTL/cooldown/giới hạn số lần thử nằm ở `settings.PASSWORD_RESET_*`. Xác nhận thành công
+  tăng `token_version`.
+- Avatar upload lưu file dưới `backend/uploads` (mount `/uploads` ở `main.py`) và ghi
+  `avatar_url` vào user. Dùng `AVATAR_MAX_BYTES` để giới hạn dung lượng.
 
 ## 5. Luồng học tập (Mastery + FSRS)
 
@@ -189,6 +204,36 @@ progress (goal, streak)            → tasks + goal_met
 - Level suy ra từ ngưỡng XP (`LEVEL_THRESHOLDS`).
 - Streak tăng khi học ngày liên tiếp (`last_study_date`).
 
+### 5.6 Level assessment
+
+`POST /assessments` tạo attempt server-owned (`level_assessment_attempts`, TTL theo
+`ASSESSMENT_EXPIRE_MINUTES`) với tối đa `ASSESSMENT_QUESTION_COUNT` câu từ
+`exercise_items`. `POST /assessments/attempts/{id}/submit` chấm điểm server-side,
+idempotent theo `attempt_id`, lưu result của lần nộp đầu tiên. Đạt
+`ASSESSMENT_PASS_PERCENT` → ghi `level_assessment_results` và mở cấp độ tiếp theo
+(hoặc nâng `placement_levels`/`learning_level` nếu là placement target). Trạng thái
+cho UI Level-Up Hub ở `GET /progress/assessment-status`.
+
+### 5.7 Luyện nói & kiểm tra từ
+
+```
+POST /speaking/check-word → dictionaryapi.dev (cache 24h, ≤1000 từ/worker)
+                          → Datamuse (gợi ý) → đối chiếu lại từ điển trước khi trả
+POST /speaking/exercises  → validate custom_words → lưu speaking_exercises
+POST .../items/{i}/score  → audio thô → Speechace/Chivox → lưu results[i]
+```
+
+Không có AI sinh định nghĩa; từ không có trong từ điển chỉ được coi là "chưa xác nhận".
+Giới hạn request dùng chung collection `ai_rate_limits` (bucket 1 phút, TTL 1 giờ).
+
+### 5.8 Story game & AI chat
+
+- Story game (`/games/story`): chọn 1–7 từ đã học, gọi Mistral JSON mode, validate schema
+  (`GeneratedStory`), bắt buộc xuất hiện đúng từ đã chọn, lưu `story_games`; 503 nếu provider
+  lỗi. Truyện mẫu là dữ liệu tĩnh, không cần key. Xem [story-game.md](story-game.md).
+- AI chat (`POST /chat/messages`): `ChatWidget` gửi kèm tối đa 8 lượt history và ngữ cảnh
+  trang/intent/text được chọn; trả lời kèm gợi ý và action link. Chia sẻ rate limit 10/phút.
+
 ## 6. Luồng AI Generate
 
 ```
@@ -201,8 +246,9 @@ User nhập "ephemeral"
 
 - `POST /vocabulary/ai-generate-batch` (admin): sinh/suggest nhiều từ, có thể `save`.
 - Thiếu `GEMINI_API_KEY` → lỗi cấu hình; quota hết → `AIQuotaError` (không retry).
-- Cấu hình `CF_*` (Cloudflare Workers AI) được giữ để tương thích `.env` nhưng
-  hiện **chưa được nối** vào `ai_service`; production dùng Gemini.
+- `ai_service._call_ai()` ưu tiên Gemini; khi Gemini lỗi và có `CF_ACCOUNT_ID` +
+  `CF_API_TOKEN` sẽ fallback sang Cloudflare Workers AI. Story game dùng riêng
+  `mistral_service`, không đi qua fallback này.
 
 ## 7. Dữ liệu (tóm tắt)
 
@@ -221,12 +267,20 @@ User nhập "ephemeral"
 | `lesson_progress` | Hoàn thành bài học theo user/lesson |
 | `fsrs_review_logs` | Lịch sử ôn FSRS |
 | `quiz_questions` | Câu hỏi quiz tạm thời (TTL `expires_at`) |
+| `story_games` | Truyện đã tạo, kèm quiz và lần nộp đầu tiên |
+| `speaking_exercises` | Bài luyện nói + kết quả chấm phát âm theo `results[index]` |
+| `level_assessment_attempts` | Attempt đánh giá trình độ (TTL `expires_at`) |
+| `level_assessment_results` | Kết quả đã đạt theo user/domain/level |
+| `password_reset_otps` | OTP hash, TTL, cooldown và số lần thử |
+| `ai_rate_limits` | Bucket 1 phút cho AI/speaking/story (TTL 1 giờ) |
 | `flashcard_progress` | Legacy Leitner (giữ để tương thích dữ liệu) |
 
 Kho từ vựng được nạp bằng `scripts/import_english_vocab_pipeline.py` (CSV → MongoDB)
 và làm giàu bằng `scripts/enrich_vocabularies.py` (IPA từ dictionaryapi.dev,
 topic bằng Gemini/keyword, chuẩn hóa `review_status`). Script chỉ điền trường
 trống, có backup, lưu tiến độ trong `vocab_enrichment_jobs` và chạy lại an toàn.
+`vocab_raw_cache` / `vocab_enrichment_jobs` do script quản lý, không nằm trong
+`ensure_indexes()` của backend.
 
 Chi tiết schema/index: [erd.md](erd.md).
 
@@ -240,7 +294,11 @@ Chi tiết schema/index: [erd.md](erd.md).
 | Driver | Motor 3.6 + PyMongo | Async chính thức |
 | Auth | JWT (python-jose) + bcrypt | Stateless, `token_version` để thu hồi |
 | Spaced repetition | `fsrs==6.3.2` | Thay Leitner ở luồng chính |
-| AI | Google Gemini (httpx) | JSON mode, retry + quota handling |
+| AI | Google Gemini (httpx) → Cloudflare Workers AI | JSON mode, retry + quota handling, fallback |
+| Story AI | Mistral (`mistral-small-latest`) | JSON mode, schema validation |
+| Pronunciation | Speechace / Chivox (+ ffmpeg) | Chấm audio server-side |
+| Dictionary | dictionaryapi.dev + Datamuse | Cache 24h, verify gợi ý |
+| Email | SMTP (`SMTP_*`) | OTP quên mật khẩu |
 | Frontend | React 18 + Vite 6 | SPA, code-split theo route |
 | Routing | React Router 6 | Guard theo role/onboarding |
 | HTTP client | Axios | Interceptor JWT + xử lý 401 |

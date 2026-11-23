@@ -1,7 +1,8 @@
 # API Specification — SmartVOCAB AI
 
 Base URL: `http://localhost:8000` (dev) hoặc `http://localhost:8080/api` (qua nginx Docker).
-Trừ `/health` và `/auth/register|login`, mọi endpoint yêu cầu header:
+Public (không cần token): `/health`, `/auth/register`, `/auth/login` và 3 endpoint
+`/auth/password-reset/request|verify|confirm`. Mọi endpoint khác yêu cầu header:
 
 ```
 Authorization: Bearer <access_token>
@@ -53,7 +54,7 @@ Body: `{ "email": "...", "password": "..." }`
 {
   "access_token": "eyJhbGciOi...",
   "token_type": "bearer",
-  "user": { "id": "user@example.com", "email": "user@example.com", "username": "nguyenvana", "role": "user", "xp": 0, "streak": 0, "onboarded": false, "interests": [], "daily_goal": 10, "daily_new_limit": 10, "daily_review_limit": 30 }
+  "user": { "id": "user@example.com", "email": "user@example.com", "username": "nguyenvana", "role": "user", "xp": 0, "streak": 0, "onboarded": false, "learning_level": null, "placement_levels": {}, "interests": [], "daily_goal": 10, "daily_new_limit": 10, "daily_review_limit": 30, "avatar_url": null }
 }
 ```
 
@@ -85,6 +86,26 @@ Body: `{ "current_password": "...", "new_password": "..." }`
   (token cũ bị thu hồi do `token_version` tăng, token mới của phiên hiện tại vẫn dùng được)
 - `400` → sai mật khẩu hiện tại / mật khẩu mới trùng cũ
 
+### `POST /auth/me/avatar`
+
+Body: multipart/form-data với field `avatar` (ảnh, tối đa `AVATAR_MAX_BYTES`, mặc định 2 MB).
+Trả `UserOut` với `avatar_url` mới; ảnh cũ bị xóa. Lưu tại `/uploads/...`.
+
+### `POST /auth/password-reset/request` (public)
+
+Body: `{ "email": "user@example.com" }`. Trả thông báo trung tính dù email không tồn tại
+(tránh lộ tài khoản). Gửi OTP 6 chữ số qua SMTP nếu email hợp lệ và đang active.
+
+### `POST /auth/password-reset/verify` (public)
+
+Body: `{ "email": "...", "otp": "123456" }` · `200` → `{ "verified": true }`.
+`400` nếu OTP sai/hết hạn/quá số lần thử.
+
+### `POST /auth/password-reset/confirm` (public)
+
+Body: `{ "email": "...", "otp": "123456", "new_password": "..." }`.
+`200` → thông báo đăng nhập lại; mật khẩu được đổi và `token_version` tăng.
+
 ---
 
 ## Domains — `/domains`
@@ -96,7 +117,7 @@ Trả danh sách lĩnh vực đang active: `slug`, `name`, `name_vi`, `descripti
 
 ---
 
-## Vocabulary — `/vocabulary` (alias: `/vocabularies`)
+## Vocabulary — `/vocabulary` (chỉ 2 GET có alias `/vocabularies`: list và detail)
 
 ### `GET /vocabulary`
 
@@ -209,6 +230,14 @@ bỏ qua `unit` sẽ dùng unit mặc định (unit đầu tiên chưa hoàn th�
 ```
 
 - `400` → câu hỏi không hợp lệ/hết hạn/không khớp.
+- Response thực tế cũng có `results[]` (chi tiết từng câu) và `wrong_count`.
+
+### `POST /lessons/quiz/analyze-all-mistakes`
+
+Body: `{ "mistakes": [ { "vocabulary_id": "...", "question": "...", "correct_answer": "...", "user_answer": "..." } ] }` (1–20 mục).
+`200` → `{ "analyses": [ { "error_type", "what_went_wrong", "explanation", "correct_answer", "example", "tip" } | null ] }`.
+Chỉ phân tích lỗi bằng AI, **không** tham gia chấm điểm; lỗi AI trả `null` ở vị trí tương ứng.
+Giới hạn 10 request/phút/người.
 
 ---
 
@@ -277,6 +306,13 @@ Kế hoạch học trong ngày, tổng hợp từ FSRS + lịch sử trả lời
 - `new_count = min(goal - studied_today, số từ mới phù hợp)`; từ mới ưu tiên lĩnh vực quan tâm và CEFR của người học.
 - `422` nếu `tz_offset` ngoài khoảng.
 
+### `GET /learning/dashboard?tz_offset=420`
+
+Gộp 4 luồng thành một request cho trang tổng quan:
+`{ "progress": UserProgressOut, "stats": {...}, "lessons": [...], "daily": {...} }`.
+Mỗi trường có cấu trúc như endpoint tương ứng (`/progress`, `/learning/stats`,
+`/lessons`, `/learning/daily`).
+
 ### `POST /learning/sessions`
 
 Body:
@@ -335,6 +371,18 @@ Phân rã Mastery (`meaning`, `spelling`, `context`) theo từ/kỹ năng.
 
 Query: `limit=50` (1–200). Lịch sử trả lời gần đây.
 
+### `GET /progress/assessment-status`
+
+Trạng thái đánh giá của user hiện tại cho Level-Up Hub:
+
+```json
+{ "domains": [ { "id": "general", "name": "General English", "name_vi": "...",
+  "levels": [ { "level": "A1", "completed": true, "assessment_passed": false,
+                "status": "ready", "total_words": 42 } ] } ] }
+```
+
+`status`: `locked` (chưa xong bài) · `ready` (xong bài, chưa đạt assessment) · `passed`.
+
 ### `POST /progress/study-answer`
 
 Body:
@@ -344,6 +392,107 @@ Body:
 ```
 
 `200` → `AnswerResult`. `400` nếu dữ liệu/kiểu kỹ năng không hợp lệ.
+
+---
+
+## Level Assessment — `/assessments`
+
+Mọi endpoint yêu cầu user đã đăng nhập. Đạt ≥ `ASSESSMENT_PASS_PERCENT` (mặc định 70)
+sẽ lưu kết quả và mở cấp độ tiếp theo; nộp lại cùng `attempt_id` trả lại result cũ.
+
+### `POST /assessments`
+
+Body: `{ "domain": "general", "level": "B1", "skip_learning": false, "placement_target": null }`.
+`201` → `AssessmentOut`: `{ "attempt_id", "domain", "level", "question_count",
+"expires_at", "questions": [ExerciseItemOut] }` (câu hỏi **không** kèm đáp án).
+`400` nếu đã đạt, chưa xong các unit trước, đang cooldown hoặc không đủ câu hỏi.
+
+### `GET /assessments/attempts/{attempt_id}`
+
+`200` → attempt còn active/chưa hết hạn (kèm câu hỏi) · `404` nếu không có/hết hạn.
+
+### `GET /assessments/{domain}/{level}`
+
+Trạng thái của user cho một cấp độ:
+`{ "units_completed", "units_total", "completed", "passed", "assessment_required", "retry_at" }`.
+
+### `POST /assessments/attempts/{attempt_id}/submit`
+
+Body: `{ "answers": [ { "exercise_item_id": "...", "answer": "..." } ] }` (phải khớp đúng
+danh sách câu đã phát). `200` →
+`{ "attempt_id", "domain", "level", "correct", "total", "percent", "passed",
+"next_level", "opened_level", "placement_target", "results": [...], "submitted_at" }`.
+`400` nếu sai số lượng/sai câu/hết hạn.
+
+---
+
+## Speaking — `/speaking`
+
+### `POST /speaking/check-word`
+
+Body `{ "word": "invoice" }` · `200` →
+`{ "word": "invoice", "valid": true, "definition": "...", "suggestions": [...] }`.
+Từ hợp lệ được cache 24 giờ/tối đa 1000 từ; gợi ý lấy từ Datamuse rồi đối chiếu lại từ điển.
+`400` nếu đầu vào không phải một từ tiếng Anh; `503` nếu dictionary API không phản hồi.
+Giới hạn 60 request/phút/người.
+
+### `GET /speaking/words`
+
+Danh sách từ đã học của user: `[{ "id", "word", "meaning" }]`.
+
+### `POST /speaking/exercises`
+
+Body: `{ "vocabulary_ids": ["..."], "custom_words": ["invoice"], "auto_select": false }`
+(chọn một cách; tối đa 20 mỗi bài). Từ tùy chỉnh được kiểm tra lại server-side.
+`200` → `{ "id", "items": [{ "text", "source" }], "results": {} }`.
+`400` nếu không có từ/chọn từ chưa học. Giới hạn 10 request/phút/người.
+
+### `GET /speaking/exercises/{exercise_id}`
+
+Chi tiết bài của chính user (kèm `results` đã chấm) · `404` nếu không có/không thuộc user.
+
+### `POST /speaking/exercises/{exercise_id}/items/{index}/score`
+
+Body: audio thô (`audio/webm`, `audio/mp4`, ...) tối đa 5 MB. Chấm qua Speechace hoặc
+Chivox theo `PRONUNCIATION_PROVIDER`, lưu kết quả vào `results[index]`.
+`413` nếu vượt 5 MB; `503` nếu provider lỗi. Giới hạn 10 request/phút/người.
+
+Chi tiết: [speaking-word-validation.md](speaking-word-validation.md).
+
+---
+
+## Story game — `/games/story`
+
+| Method | Path | Mô tả |
+|---|---|---|
+| `GET` | `/games/story/words` | Từ đã học để chọn vào truyện |
+| `POST` | `/games/story/stories` | `{ "topic", "tone", "vocabulary_ids" }` (1–7 từ) → tạo truyện bằng Mistral |
+| `POST` | `/games/story/demo` | Lưu truyện mẫu, không cần AI key |
+| `GET` | `/games/story/stories` | 20 truyện gần nhất của user |
+| `GET` | `/games/story/stories/{id}` | Chi tiết truyện của chính user, chưa trả đáp án quiz |
+| `POST` | `/games/story/stories/{id}/answers` | `{ "answers": [0, 1, 2] }` (index 0-based); nộp lại trả result đầu tiên |
+
+Tạo truyện bị giới hạn 5 request/phút/người; provider lỗi trả `503` kèm thông báo thử lại.
+Chi tiết: [story-game.md](story-game.md).
+
+---
+
+## AI Chat — `/chat`
+
+### `POST /chat/messages`
+
+Body:
+
+```json
+{
+  "message": "Giải thích giúp mình từ này",
+  "history": [{ "role": "user", "content": "..." }],
+  "context": { "page": "dashboard", "intent": "word_explanation", "selected_text": "ephemeral" }
+}
+```
+
+`200` → `{ "message": "...", "suggestions": ["..."], "action_label": "...", "action_href": "/..." }`.
+`429` khi chạm quota Gemini; `503` khi AI không phản hồi. Giới hạn 10 request/phút/người.
 
 ---
 
@@ -404,5 +553,8 @@ Token hợp lệ nhưng role `user` → `403 {"detail": "Admin privileges requir
 | 403 | Không đủ quyền (cần `admin`) hoặc tài khoản bị khóa |
 | 404 | Không tìm thấy tài nguyên |
 | 409 | Dữ liệu trùng lặp (email, bài học còn từ vựng) |
+| 413 | Audio/upload vượt giới hạn |
 | 422 | Validation lỗi (Pydantic) |
-| 502 | Lỗi dịch vụ AI |
+| 429 | Chạm rate limit hoặc quota AI |
+| 502 | Lỗi dịch vụ AI (sinh từ vựng) |
+| 503 | Dịch vụ phụ trợ không sẵn sàng (AI chat, Mistral, dictionary, chấm phát âm) |

@@ -2,6 +2,9 @@
 
 > Cập nhật theo code hiện tại. MongoDB không có schema cứng; tài liệu mô tả các
 > trường chính đang được đọc/ghi. `users._id` là **email** (chuỗi, lowercase).
+> Ngoài collections học tập lõi, codebase còn có story/speaking/assessment/reset/rate limit
+> (mô tả ở dưới). `vocab_raw_cache` và `vocab_enrichment_jobs` do script import quản lý,
+> không được tạo index trong `ensure_indexes()`.
 
 ## 1. Collections
 
@@ -16,6 +19,7 @@
   "role": "user | admin",
   "created_at": "ISODate",
   "learning_level": "A1..C2 | null",
+  "placement_levels": { "general": "B1", "technology": "A2", "business": "A1" },
   "interests": ["technology", "business"],
   "onboarded": false,
   "daily_goal": 10,
@@ -25,7 +29,8 @@
   "profile_completed_at": "ISODate | null",
   "token_version": 0,
   "is_active": true,
-  "updated_at": "ISODate | null"
+  "updated_at": "ISODate | null",
+  "avatar_url": "/uploads/avatar-....png | null"
 }
 ```
 
@@ -239,14 +244,19 @@
   "user_id": "user@example.com",
   "lesson_id": "general-a1",
   "topic": "general",
+  "unit": 1,
+  "units": [1, 2],
   "completed": true,
   "completed_at": "ISODate",
   "learned_count": 12,
-  "mastered_count": 4
+  "mastered_count": 4,
+  "completion_source": "quiz | assessment"
 }
 ```
 
-- Unique `(user_id, lesson_id)` (partial). Legacy `(user_id, topic)` index được tự xóa.
+- Mỗi bài được chia thành unit ổn định (tối đa 15 từ) nên hoàn thành được lưu **theo unit**.
+- Unique `(user_id, lesson_id, unit)` (partial, tên `uniq_user_lesson_unit`); index legacy
+  `(user_id, topic)` và `uniq_user_lesson` bị xóa lúc khởi động.
 
 ### fsrs_review_logs
 
@@ -303,6 +313,105 @@
 > Giữ để tương thích dữ liệu cũ/migration. Luồng ôn tập hiện tại dùng
 > `user_word_states.fsrs` + `fsrs_review_logs`, không dùng `box`.
 
+### story_games
+
+```json
+{
+  "_id": ObjectId("..."),
+  "user_id": "user@example.com",
+  "words": [{ "id": "657abc...", "word": "ephemeral", "meaning": "..." }],
+  "topic": "travel",
+  "tone": "warm",
+  "source": "ai | demo",
+  "title": "A Small Trip",
+  "paragraphs": ["..."],
+  "translation": ["..."],
+  "questions": [{ "question": "...", "options": ["..."], "answer": 2, "explanation": "..." }],
+  "result": { "answers": [0, 1, 2], "correct": 3, "total": 3, "submitted_at": "ISODate" } | null,
+  "created_at": "ISODate"
+}
+```
+
+- Chỉ chủ sở hữu mới đọc được; API ẩn `questions[].answer` trước khi nộp bài.
+- Index `(user_id, created_at desc)` phục vụ 20 truyện gần nhất.
+
+### speaking_exercises
+
+```json
+{
+  "_id": ObjectId("..."),
+  "user_id": "user@example.com",
+  "items": [{ "text": "invoice", "source": "learned | custom" }],
+  "results": { "0": { "score": 85, "provider": "speechace", "assessment_details": {} } },
+  "created_at": "ISODate"
+}
+```
+
+- `results[index]` được ghi khi chấm audio; provider và cấu trúc điểm do Speechace/Chivox trả về.
+
+### level_assessment_attempts
+
+```json
+{
+  "_id": ObjectId("..."),
+  "attempt_id": "uuid",
+  "user_id": "user@example.com",
+  "domain": "general",
+  "level": "B1",
+  "item_ids": ["657abc...:meaning"],
+  "status": "active | submitted | expired",
+  "created_at": "ISODate",
+  "expires_at": "ISODate (TTL)",
+  "submitted_at": "ISODate | null",
+  "passed": false,
+  "result": { "...kết quả chấm điểm..." } | null
+}
+```
+
+### level_assessment_results
+
+```json
+{
+  "_id": ObjectId("..."),
+  "user_id": "user@example.com",
+  "domain": "general",
+  "level": "B1",
+  "attempt_id": "uuid",
+  "passed_at": "ISODate"
+}
+```
+
+- Unique `(user_id, domain, level)`; tồn tại nghĩa là cấp độ đã đạt assessment.
+
+### password_reset_otps
+
+```json
+{
+  "_id": ObjectId("..."),
+  "email": "user@example.com",
+  "otp_hash": "HMAC-SHA256(email:otp, JWT_SECRET)",
+  "attempts": 0,
+  "created_at": "ISODate",
+  "expires_at": "ISODate (TTL)",
+  "used_at": "ISODate | null",
+  "invalidated_at": "ISODate | null"
+}
+```
+
+- OTP không lưu plaintext; TTL dùng `PASSWORD_RESET_OTP_TTL_MINUTES`.
+
+### ai_rate_limits
+
+```json
+{
+  "_id": "user@example.com:1234567",
+  "count": 3,
+  "expires_at": "ISODate (TTL 3600s)"
+}
+```
+
+- Bucket theo phút, dùng chung cho AI chat, quiz mistake analysis, speaking và story.
+
 ## 2. Mối quan hệ (logic)
 
 ```
@@ -313,6 +422,11 @@ users         1───* lesson_progress   *───1 lessons
 users         1───* fsrs_review_logs  *───1 vocabularies
 vocabularies  1───* exercise_items
 users         1───* quiz_questions    *───1 vocabularies
+users         1───* story_games       *───* vocabularies (words[])
+users         1───* speaking_exercises
+users         1───* level_assessment_attempts *───1 exercise_items (item_ids)
+users         1───1 level_assessment_results
+users         1───* password_reset_otps (theo email)
 ```
 
 | Quan hệ | Khóa |
@@ -330,6 +444,10 @@ users         1───* quiz_questions    *───1 vocabularies
 ## 3. Indexes (tạo trong `app/db/mongodb.py::ensure_indexes`)
 
 ```javascript
+// AI/rate limit & story
+db.ai_rate_limits.createIndex({ expires_at: 1 }, { expireAfterSeconds: 3600 })
+db.story_games.createIndex({ user_id: 1, created_at: -1 })
+
 // users
 db.users.createIndex({ email: 1 }, { unique: true, sparse: true })
 db.users.createIndex({ role: 1 })
@@ -390,13 +508,16 @@ db.answer_attempts.createIndex(
 db.user_word_states.createIndex({ user_id: 1, vocabulary_id: 1 }, { unique: true })
 db.user_word_states.createIndex({ user_id: 1, "fsrs.due_at": 1 })
 
-// lesson progress
+// lesson progress (theo unit)
 db.lesson_progress.createIndex(
-  { user_id: 1, lesson_id: 1 },
+  { user_id: 1, lesson_id: 1, unit: 1 },
   {
     unique: true,
-    partialFilterExpression: { lesson_id: { $type: "string" } },
-    name: "uniq_user_lesson"
+    partialFilterExpression: {
+      lesson_id: { $type: "string" },
+      unit: { $type: "int" }
+    },
+    name: "uniq_user_lesson_unit"
   }
 )
 db.lesson_progress.createIndex({ user_id: 1, topic: 1 })
@@ -408,6 +529,23 @@ db.fsrs_review_logs.createIndex(
 )
 db.fsrs_review_logs.createIndex({ user_id: 1, reviewed_at: -1 })
 
+// level assessments
+db.level_assessment_attempts.createIndex(
+  { attempt_id: 1 },
+  { unique: true, partialFilterExpression: { attempt_id: { $type: "string" } } }
+)
+db.level_assessment_attempts.createIndex(
+  { user_id: 1, domain: 1, level: 1, created_at: -1 }
+)
+db.level_assessment_attempts.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 })
+db.level_assessment_results.createIndex(
+  { user_id: 1, domain: 1, level: 1 }, { unique: true }
+)
+
+// password reset OTPs
+db.password_reset_otps.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 })
+db.password_reset_otps.createIndex({ email: 1, created_at: -1 })
+
 // legacy quiz (TTL)
 db.quiz_questions.createIndex({ question_id: 1 }, { unique: true })
 db.quiz_questions.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 })
@@ -418,10 +556,14 @@ db.flashcard_progress.createIndex({ user_id: 1, vocabulary_id: 1 }, { unique: tr
 
 ## 4. Quy tắc xóa / đổi tên
 
-- **Đổi email (admin)**: cập nhật `users._id` và lan sang các collection dữ liệu người
-  dùng (`user_word_states`, `answer_attempts`, `learning_sessions`, `fsrs_review_logs`,
-  `lesson_progress`, `quiz_questions`, `flashcard_progress`).
-- **Xóa user (admin)**: xóa user cùng dữ liệu học tập ở các collection trên.
+- **Đổi email (admin)**: cập nhật `users._id` và lan sang `user_word_states`,
+  `answer_attempts`, `learning_sessions`, `fsrs_review_logs`, `lesson_progress`,
+  `quiz_questions`, `flashcard_progress` (danh sách `USER_DATA_COLLECTIONS` trong
+  `app/routers/admin_router.py`). Avatar local không bị đổi tên.
+- **Xóa user (admin)**: xóa user + dữ liệu ở chính các collection trên và xóa file avatar.
+- **Giới hạn hiện tại**: `story_games`, `speaking_exercises`, `level_assessment_attempts`
+  và `level_assessment_results` chưa nằm trong `USER_DATA_COLLECTIONS`, nên chưa được
+  tự động migrate khi đổi email hoặc xóa qua admin. Cần thêm vào danh sách này ở bước sau.
 - **Xóa vocabulary**: dọn `exercise_items`/`user_word_states` liên quan (thực hiện
   trong `vocabulary_service`).
 - **Xóa lesson**: chỉ xóa metadata; nếu còn từ vựng thuộc `domain`+`level` → trả `409`.

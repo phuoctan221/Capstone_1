@@ -4,9 +4,11 @@
 Adaptive English Vocabulary Learning Platform
 
 ## Technology Stack
-- ReactJS + Vite
+- ReactJS 18 + Vite 6
 - Python + FastAPI
 - MongoDB
+- Google Gemini (chính) / Cloudflare Workers AI (dự phòng) / Mistral (story game)
+- Speechace hoặc Chivox (chấm phát âm), Free Dictionary API + Datamuse (kiểm tra từ)
 
 ## Team
 5 members
@@ -25,6 +27,10 @@ và ôn tập theo lịch FSRS (spaced repetition) dựa trên độ thành th�
 - Luyện tập 3 dạng câu hỏi (Meaning, Spelling, Context) và ôn tập flashcards theo FSRS với 3 chế độ Lật thẻ / Recall / Cloze
 - Theo dõi tiến độ: độ thành thạo từ, XP, streak, thống kê theo lĩnh vực/kỹ năng
 - Gợi ý từ vựng bằng AI: phiên âm, nghĩa tiếng Việt, ví dụ, đồng/nghĩa trái
+- Luyện nói với từ đã học hoặc từ tự nhập; kiểm tra từ bằng Free Dictionary API + Datamuse, chấm phát âm qua Speechace/Chivox
+- Trợ lý học tập AI (`ChatWidget`) và AI Story game: truyện có từ đã học, bản dịch và 3 câu hỏi hiểu bài
+- Đánh giá trình độ theo lĩnh vực/cấp độ; đạt bài đánh giá sẽ mở cấp độ tiếp theo
+- Quên mật khẩu qua OTP email; upload avatar trong hồ sơ
 - Trang quản trị `/admin`: dashboard số liệu thật, quản lý người dùng, từ vựng, lĩnh vực, bài học và ngân hàng câu hỏi
 
 ## Cấu trúc dự án
@@ -33,7 +39,8 @@ và ôn tập theo lịch FSRS (spaced repetition) dựa trên độ thành th�
 SmartVOCAB/
 ├── frontend/     # React 18 + Vite (src/components, pages, services)
 ├── backend/      # FastAPI + MongoDB (app/core, db, models, routers, services, scripts)
-├── docs/         # requirements.md, architecture.md, erd.md, api-spec.md, deployment.md
+├── docs/         # requirements.md, architecture.md, erd.md, api-spec.md, deployment.md,
+│                 # story-game.md, speaking-word-validation.md
 └── data/         # sample_vocabulary.json
 ```
 
@@ -169,7 +176,9 @@ cd backend
 - [ ] Mở frontend, thấy trang đăng nhập
 - [ ] Đăng ký / đăng nhập được
 - [ ] Thêm / sửa / xóa một từ vựng
-- [ ] (Nếu có key) thử gợi ý từ vựng AI
+- [ ] (Nếu có key) thử gợi ý từ vựng AI, trò chuyện với trợ lý và tạo truyện ở `/games/story`
+- [ ] Ở `/speaking`, kiểm tra một từ và thử chấm phát âm (cần key Speechace hoặc Chivox)
+- [ ] Viết lại mật khẩu qua `/forgot-password` (cần cấu hình SMTP)
 - [ ] Tạo tài khoản admin (xem mục dưới) và mở được `/admin`
 
 ### 8. Tài khoản admin
@@ -196,7 +205,7 @@ API `/admin/*` đều yêu cầu role `admin` và trả `403` cho tài khoản k
 
 Giao diện được tách theo vai trò:
 
-- **Người học** dùng `Navbar` và các trang `/dashboard`, `/learn`, `/progress`, `/flashcards`, `/vocabulary`, `/profile`.
+- **Người học** dùng `Navbar` và các trang `/dashboard`, `/learn`, `/progress`, `/flashcards`, `/speaking`, `/games/story`, `/vocabulary`, `/profile`; ngoài ra có `/assessments/:domain/:level`, `/settings/learning` và `/forgot-password`.
 - **Admin** dùng `AdminLayout` tại `/admin` (tổng quan, người dùng, từ vựng, lĩnh vực, bài học, câu hỏi).
 - Admin mở đường dẫn người học sẽ được chuyển về `/admin`; người học mở `/admin` sẽ bị chuyển về `/dashboard`.
 - Khi token hết hạn hoặc không hợp lệ, frontend xóa phiên và đưa về `/login`; quyền thực tế luôn do backend kiểm tra.
@@ -209,7 +218,9 @@ cd backend
 ```
 
 Bộ test dùng MongoDB Atlas thật qua `backend/tests/support.py` (database `capstone1_mvp_test`),
-vì vậy cần `MONGO_URI` hợp lệ và mạng ổn định. Frontend hiện kiểm tra bằng `npm run build`.
+vì vậy cần `MONGO_URI` hợp lệ và mạng ổn định. Có thể chạy riêng từng nhóm, ví dụ
+`python -m unittest tests.test_story tests.test_speaking tests.test_word_validation tests.test_chivox tests.test_assessment`.
+Frontend chưa có unit test tự động; kiểm tra bằng `npm run build` và hai script browser thủ công trong `frontend/tests/`.
 
 ### 10. Lỗi thường gặp
 
@@ -236,10 +247,12 @@ vì vậy cần `MONGO_URI` hợp lệ và mạng ổn định. Frontend hiện 
 - JWT đang lưu trong `localStorage`, chưa có refresh token/rotation. Phù hợp MVP; nếu triển khai công khai nên chuyển sang cookie `httpOnly` + `Secure`.
 - Chưa có rate limiting, audit log thao tác admin hoặc khóa tài khoản.
 - Ba lĩnh vực là cố định theo MVP; admin sửa được tên/mô tả/thứ tự/trạng thái nhưng không tạo hoặc xóa lĩnh vực.
-- Câu hỏi được sinh tự động từ từ vựng; admin sửa/xóa/tắt/tái tạo nhưng UI chưa có form tạo mới (backend đã có `POST /admin/exercises`).
+- Câu hỏi được sinh tự động từ từ vựng; admin có thể tạo/sửa/xóa/tắt/tái tạo cả qua UI lẫn API. Đáp án luôn nằm ở server.
 - Xóa bài học chỉ xóa metadata; phải xóa hoặc chuyển từ vựng trước, nếu không backend trả `409`.
-- Test backend cần MongoDB Atlas; khi không kết nối được, test được skip thay vì fail. Frontend chưa có unit test, hiện kiểm tra bằng `npm run build`.
+- Test backend cần MongoDB Atlas; khi không kết nối được, test được skip thay vì fail. Frontend chưa có unit test tự động, hiện kiểm tra bằng `npm run build`.
+- Luyện nói cần mạng và key Speechace hoặc Chivox; story game cần `MISTRAL_API_KEY`, còn quên mật khẩu cần cấu hình SMTP. Các luồng học chính vẫn chạy khi thiếu các key này.
 - Docker Phase A chưa có TLS và chạy `api1`/`api2` trên cùng một host; Phase B (replica set 3 node) chưa bật.
+- Đổi/xóa user qua admin chưa lan sang dữ liệu story/speaking/assessment (chỉ các collection học tập lõi); xem `docs/erd.md`.
 
 ## MongoDB Atlas — database dùng chung
 
@@ -314,7 +327,17 @@ Backend luôn in ra database đang dùng khi khởi động, và `/health` trả
 | `MONGO_DB_NAME` | Tên database (`capstone1`) |
 | `MONGO_TIMEOUT_MS` | Timeout chọn server (mặc định 10000 ms) |
 | `JWT_SECRET` | Chuỗi bí mật ký JWT |
-| `GEMINI_API_KEY` | API key Google Gemini (để bật AI) |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Thời hạn JWT (mặc định 1440) |
+| `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_RPM` | Gợi ý từ/trợ lý/phân tích lỗi; model mặc định `gemini-3.8-flash` |
+| `MISTRAL_API_KEY`, `MISTRAL_MODEL` | AI Story game; model mặc định `mistral-small-latest` |
+| `CF_ACCOUNT_ID`, `CF_API_TOKEN`, `CF_MODEL`, `CF_RPM` | Cloudflare Workers AI, fallback khi Gemini lỗi |
+| `DICTIONARY_RPM` | Giới hạn gọi dictionaryapi.dev khi kiểm tra từ |
+| `SPEECHACE_API_KEY`, `SPEECHACE_URL`, `SPEECHACE_DIALECT` | Chấm phát âm qua Speechace |
+| `PRONUNCIATION_PROVIDER`, `CHIVOX_API_KEY`, `FFMPEG_PATH` | Đổi sang Chivox và cấu hình ffmpeg |
+| `AVATAR_MAX_BYTES` | Dung lượng tối đa ảnh đại diện (mặc định 2 MB) |
+| `SMTP_*`, `PASSWORD_RESET_*` | Gửi OTP quên mật khẩu; xem `backend/.env.example` |
+| `ASSESSMENT_*` | Số câu, ngưỡng đạt, TTL và cooldown của bài đánh giá |
+| `MASTERY_*`, `SESSION_MAX_QUESTIONS`, `MIN_LESSON_WORDS` | Ngưỡng Mastery và giới hạn engine bài tập |
 | `CORS_ORIGINS` | Danh sách origin được phép |
 
 ## Dữ liệu mẫu
@@ -433,3 +456,5 @@ Chi tiết rollback, bảo toàn dữ liệu và lộ trình Replica Set: [docs/
 - [ERD](docs/erd.md)
 - [API Specification](docs/api-spec.md)
 - [Triển khai Docker](docs/deployment.md)
+- [AI Story game](docs/story-game.md)
+- [Kiểm tra từ khi luyện nói](docs/speaking-word-validation.md)

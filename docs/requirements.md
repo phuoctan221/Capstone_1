@@ -1,7 +1,8 @@
 # SmartVOCAB AI — Tài liệu Nhu cầu (Requirements)
 
-> Cập nhật theo phạm vi MVP hiện tại: 3 lĩnh vực, Mastery đa kỹ năng + FSRS,
-> RBAC `user`/`admin`. Leitner 5 hộp chỉ còn là dữ liệu legacy.
+> Cập nhật theo mã nguồn hiện tại: 3 lĩnh vực, Mastery đa kỹ năng + FSRS,
+> RBAC `user`/`admin`, kèm các luồng đã triển khai: speaking, story game, chat,
+> đánh giá trình độ và quên mật khẩu. Leitner 5 hộp chỉ còn là dữ liệu legacy.
 
 ## 1. Tổng quan
 
@@ -13,6 +14,9 @@ SmartVOCAB AI là nền tảng học từ vựng tiếng Anh thích ứng (adapt
 - Theo dõi **Mastery** từng từ theo 3 kỹ năng độc lập.
 - Ôn tập theo lịch **FSRS** (spaced repetition).
 - Theo dõi tiến độ: XP, level, streak, thống kê theo lĩnh vực/kỹ năng.
+- Luyện nói với từ đã học hoặc từ tự nhập; chấm phát âm server-side.
+- Đánh giá trình độ theo lĩnh vực/cấp độ, trợ lý học tập AI và AI Story game.
+- Đặt lại mật khẩu qua OTP email, upload avatar.
 - Trang quản trị `/admin` cho quản lý người dùng, từ vựng, lĩnh vực, bài học, ngân hàng câu hỏi.
 
 ## 2. Người dùng (Actors)
@@ -36,6 +40,8 @@ SmartVOCAB AI là nền tảng học từ vựng tiếng Anh thích ứng (adapt
 - FR-AUTH-05: Đổi mật khẩu; tăng `token_version` → thu hồi token cũ.
 - FR-AUTH-06: Tự đăng xuất phía client khi token hết hạn/không hợp lệ (`401`).
 - FR-AUTH-07: Tài khoản bị khóa (`is_active=false`) không đăng nhập được (`403`).
+- FR-AUTH-08: Quên mật khẩu qua OTP gửi email; verify OTP và đặt lại mật khẩu, tăng `token_version`.
+- FR-AUTH-09: Upload/xóa avatar (`POST /auth/me/avatar`).
 
 ### FR-DOMAIN — Lĩnh vực
 - FR-DOMAIN-01: Hiển thị 3 lĩnh vực MVP đang active.
@@ -80,14 +86,26 @@ SmartVOCAB AI là nền tảng học từ vựng tiếng Anh thích ứng (adapt
 - FR-ADMIN-06: Quản lý ngân hàng câu hỏi: xem/sửa/xóa/tạo/tái sinh.
 - FR-ADMIN-07: Mọi endpoint `/admin/*` yêu cầu `role = admin` (kiểm tra từ DB).
 
-## 4. Chức năng nâng cao (Could have)
+## 4. Chức năng bổ sung đã triển khai
 
-- FR-NB-01: Phát âm từ bằng Web Speech API.
-- FR-NB-02: Nhập từ vựng hàng loạt từ CSV/Excel.
-- FR-NB-03: Thống kê theo ngày/tuần (heatmap).
-- FR-NB-04: Chế độ chơi game ôn tập (quiz, đếm giờ).
-- FR-NB-05: Gợi ý câu ví dụ theo ngữ cảnh người dùng.
-- FR-NB-06: Refresh token / cookie httpOnly, rate limiting, audit log admin.
+- FR-EXTRA-01: Luyện nói — chọn từ đã học, từ tự nhập hoặc tự chọn; kiểm tra từ qua
+  Free Dictionary API/Datamuse; lưu bài và chấm phát âm qua Speechace/Chivox.
+- FR-EXTRA-02: AI Story game tại `/games/story` — 1–7 từ đã học, chủ đề/giọng,
+  truyện có bản dịch và 3 câu hỏi, lưu 20 truyện gần nhất, truyện mẫu không cần key.
+- FR-EXTRA-03: Trợ lý học tập AI trên các trang người học (`ChatWidget`), có ngữ cảnh
+  trang và gợi ý hành động; giới hạn 10 request/phút/người.
+- FR-EXTRA-04: Đánh giá trình độ — bài 15 câu, đạt ≥ 70% thì mở cấp độ tiếp theo;
+  có trạng thái, cooldown và chấm điểm server-side, idempotent theo `attempt_id`.
+- FR-EXTRA-05: Quên mật khẩu qua OTP email (public API), đổi avatar, upload ảnh đại diện.
+- FR-EXTRA-06: Phát âm từ/examples bằng Web Speech API ở frontend và panel quản trị
+  đầy đủ (tạo câu hỏi thủ công, AI phân tích lỗi sai sau quiz).
+
+## 4b. Chức năng nâng cao chưa hoàn thiện (Could have)
+
+- FR-NB-01: Nhập từ vựng hàng loạt từ CSV/Excel (đã có script import, chưa có UI).
+- FR-NB-02: Thống kê heatmap theo ngày/tuần.
+- FR-NB-03: Refresh token / cookie httpOnly và audit log admin.
+- FR-NB-04: Rate limiting đã có cho AI/speaking/story (Mongo TTL); chưa áp dụng cho mọi API.
 
 ## 5. Quy tắc nghiệp vụ
 
@@ -142,5 +160,9 @@ Mỗi từ có 3 điểm độc lập 0–100: `meaning`, `spelling`, `context`.
 
 - Backend: Python 3.11+, FastAPI, MongoDB Atlas (Motor + PyMongo), `fsrs==6.3.2`.
 - Frontend: React 18, Vite 6, React Router 6, Axios.
-- AI: Google Gemini (`GEMINI_API_KEY`); cấu hình Cloudflare (`CF_*`) dự phòng, chưa nối.
-- Auth: JWT Bearer; role trong MongoDB.
+- AI: Google Gemini (`GEMINI_API_KEY`) là provider chính, Cloudflare Workers AI (`CF_*`)
+  là fallback khi cấu hình; Mistral (`MISTRAL_API_KEY`) dùng riêng cho story game.
+- Pronunciation: Speechace hoặc Chivox (`PRONUNCIATION_PROVIDER`), ffmpeg để xử lý audio.
+- Dictionary/suggestion: dictionaryapi.dev và Datamuse, có cache trong worker.
+- Email: SMTP (`SMTP_*`) gửi OTP quên mật khẩu.
+- Auth: JWT Bearer; role trong MongoDB. Rate limit dùng collection `ai_rate_limits`.
