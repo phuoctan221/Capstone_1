@@ -172,7 +172,7 @@ export default function AdminPage() {
     <div className="sv-page sv-admin-page">
       <div className="sv-page-heading">
         <div>
-          <span className="sv-eyebrow">ADMIN / NỘI DUNG</span>
+          <span className="sv-eyebrow">Quản trị / Nội dung</span>
           <h1>Quản lý từ vựng</h1>
           <p>Thêm, sửa, xóa từ vựng dùng chung theo lĩnh vực và cấp độ. Bài học được nhóm tự động từ dữ liệu này.</p>
         </div>
@@ -231,14 +231,14 @@ export default function AdminPage() {
           </div>
           {formError && <div className="sv-admin-error" role="alert">{formError}</div>}
           <div className="sv-admin-form-actions">
-            {!editing && <button type="button" className="sv-btn sv-btn-outline" onClick={fillWithAI} disabled={aiLoading || saving}>{aiLoading ? "AI đang gợi ý..." : "✨ AI gợi ý"}</button>}
+            {!editing && <button type="button" className="sv-btn sv-btn-outline" onClick={fillWithAI} disabled={aiLoading || saving}>{aiLoading ? "AI đang gợi ý..." : "AI gợi ý"}</button>}
             {editing && <button type="button" className="sv-btn sv-btn-outline" onClick={resetForm} disabled={saving}>Hủy sửa</button>}
             <button type="submit" className="sv-btn sv-btn-primary" disabled={saving}>{saving ? "Đang lưu..." : editing ? "Lưu thay đổi" : "Thêm từ vựng"}</button>
           </div>
         </form>
       </section>
 
-      <div className="sv-admin-section-title" style={{ marginTop: 24 }}><div><span>KHO TỪ DÙNG CHUNG</span><h2>Danh sách từ vựng</h2></div></div>
+      <div className="sv-admin-section-title" style={{ marginTop: 24 }}><div><span>Kho từ dùng chung</span><h2>Danh sách từ vựng</h2></div></div>
 
       <div className="sv-admin-toolbar">
         <input className="sv-answer-field sv-admin-grow" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo từ hoặc nghĩa..." aria-label="Tìm từ vựng" />

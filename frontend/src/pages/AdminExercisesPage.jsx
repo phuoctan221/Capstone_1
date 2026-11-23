@@ -244,7 +244,7 @@ export default function AdminExercisesPage() {
     <div className="sv-page sv-admin-page">
       <div className="sv-page-heading">
         <div>
-          <span className="sv-eyebrow">ADMIN / CÂU HỎI</span>
+          <span className="sv-eyebrow">Quản trị / Câu hỏi</span>
           <h1>Quản lý câu hỏi</h1>
           <p>Kiểm tra và chỉnh sửa câu hỏi Meaning, Spelling, Context. Đáp án được lưu phía server và không gửi xuống người học.</p>
         </div>
@@ -305,7 +305,7 @@ export default function AdminExercisesPage() {
         </section>
       )}
 
-      <div className="sv-admin-section-title" style={{ marginTop: 24 }}><div><span>NGÂN HÀNG CÂU HỎI</span><h2>Danh sách câu hỏi</h2></div></div>
+      <div className="sv-admin-section-title" style={{ marginTop: 24 }}><div><span>Ngân hàng câu hỏi</span><h2>Danh sách câu hỏi</h2></div></div>
       <div className="sv-admin-toolbar">
         <input className="sv-answer-field sv-admin-grow" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo từ hoặc nội dung câu hỏi..." aria-label="Tìm câu hỏi" />
         <select className="sv-answer-field" value={domain} onChange={(event) => setDomain(event.target.value)} aria-label="Lọc lĩnh vực">

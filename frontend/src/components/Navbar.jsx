@@ -28,9 +28,9 @@ export default function Navbar() {
     <>
       <header className="sv-navbar">
       <div className="sv-navbar-inner">
-        <Link className="sv-brand" to="/dashboard" aria-label="SmartVocab AI - Dashboard">
-          <span className="sv-brand-mark">S<span>✦</span></span>
-          <span className="sv-brand-name">Smart<span>Vocab</span><em> AI</em></span>
+        <Link className="sv-brand" to="/dashboard" aria-label="SmartVocab - Dashboard">
+          <span className="sv-brand-mark">S</span>
+          <span className="sv-brand-name">Smart<span>Vocab</span></span>
         </Link>
         <button
           className="sv-mobile-menu"

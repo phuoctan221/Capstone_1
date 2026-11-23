@@ -38,14 +38,14 @@ export default function RegisterPage() {
     <main className="auth-page">
       <section className="auth-shell" aria-labelledby="register-title">
         <div className="auth-intro">
-          <Link className="auth-brand" to="/" aria-label="SmartVOCAB AI - Trang chủ"><span className="auth-brand-mark">SV</span> SmartVOCAB <span>AI</span></Link>
-          <span className="auth-eyebrow">BẮT ĐẦU HÀNH TRÌNH CỦA BẠN</span>
+          <Link className="auth-brand" to="/" aria-label="SmartVocab - Trang chủ"><span className="auth-brand-mark">SV</span> SmartVocab</Link>
+          <span className="auth-eyebrow">Bắt đầu học từ vựng</span>
           <h1>Mỗi từ mới là một bước tiến.</h1>
           <p>Tạo tài khoản miễn phí để lưu từ vựng, luyện tập và theo dõi tiến độ học tập.</p>
           <div className="auth-benefits"><span>✓ 4 chế độ luyện tập</span><span>✓ Tích XP mỗi ngày</span><span>✓ Ôn tập theo Leitner</span></div>
         </div>
         <div className="auth-panel">
-          <div className="auth-panel-head"><span className="auth-kicker">BẮT ĐẦU MIỄN PHÍ</span><h2 id="register-title">Tạo tài khoản</h2><p>Chỉ mất một phút để bắt đầu học.</p></div>
+          <div className="auth-panel-head"><span className="auth-kicker">Đăng ký</span><h2 id="register-title">Tạo tài khoản</h2><p>Chỉ mất một phút để bắt đầu học.</p></div>
           <form onSubmit={handleSubmit} noValidate>
             <div className="auth-field"><label htmlFor="register-username">Tên đăng nhập</label><input id="register-username" name="username" placeholder="Ví dụ: minhnguyen" autoComplete="username" minLength={3} value={form.username} onChange={update} required /><small>Ít nhất 3 ký tự</small></div>
             <div className="auth-field"><label htmlFor="register-email">Địa chỉ email</label><input id="register-email" name="email" type="email" placeholder="email@example.com" autoComplete="email" value={form.email} onChange={update} required /></div>

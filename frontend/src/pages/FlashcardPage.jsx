@@ -201,21 +201,21 @@ export default function FlashcardPage() {
   const recall = typeof current?.retrievability === "number" ? current.retrievability : null;
 
   return <div className="sv-page">
-    <div className="sv-page-heading"><div><span className="sv-eyebrow">SPACED REPETITION · FSRS</span><h1>Ôn tập thông minh</h1><p>Ôn đúng thời điểm để từ vựng ở lại trong trí nhớ lâu hơn.</p></div><button className="sv-btn sv-btn-outline" onClick={load}>↻ Tải lại</button></div>
+    <div className="sv-page-heading"><div><span className="sv-eyebrow">Spaced repetition · FSRS</span><h1>Ôn tập thông minh</h1><p>Ôn đúng thời điểm để từ vựng ở lại trong trí nhớ lâu hơn.</p></div><button className="sv-btn sv-btn-outline" onClick={load}>↻ Tải lại</button></div>
     <div className="sv-stats-grid sv-review-stats"><StatTile label="Từ đã bắt đầu" value={stats?.total_words ?? "—"} icon="Aa" note="Đã có trạng thái học"/><StatTile label="Đang học" value={stats?.learning ?? "—"} icon="↗" tone="violet"/><StatTile label="Đã thành thạo" value={stats?.mastered ?? "—"} icon="✓" tone="green"/><StatTile label="Đến hạn" value={stats?.due_today ?? "—"} icon="↻" tone="amber"/></div>
     <div className="sv-review-layout"><div className="sv-review-main">
       {error && <PageError message={error} onRetry={() => setRefresh((value) => value+1)}/>}
-      {!error && !current && <EmptyState title="Bạn đã ôn xong hôm nay!" description="Chưa có thẻ nào đến hạn. Hãy học từ mới hoặc quay lại sau."><Link className="sv-btn sv-btn-primary" to="/learn">Khám phá bài học →</Link></EmptyState>}
+      {!error && !current && <EmptyState title="Đã hoàn thành ôn tập hôm nay" description="Chưa có thẻ nào đến hạn. Hãy học từ mới hoặc quay lại sau."><Link className="sv-btn sv-btn-primary" to="/learn">Khám phá bài học →</Link></EmptyState>}
       {!error && current && !current.word && <EmptyState title="Không tải được từ vựng của thẻ" description="Dữ liệu thẻ này có thể đã bị xóa. Hãy kiểm tra trong database."><button className="sv-btn sv-btn-outline" onClick={load}>Tải lại</button></EmptyState>}
       {!error && current?.word && <>
-        <div className="sv-review-meta"><span>THẺ {index+1} / {cards.length}</span><span>FSRS · 4 mức đánh giá</span></div>
+        <div className="sv-review-meta"><span>Thẻ {index+1} / {cards.length}</span><span>FSRS · 4 mức đánh giá</span></div>
         <div className="sv-progress-track"><div style={{width:`${(index+1)/cards.length*100}%`}}/></div>
         <div className="sv-review-modes" role="tablist" aria-label="Chế độ ôn tập">
           {MODES.map((item) => <button key={item.id} type="button" role="tab" aria-selected={mode === item.id} className={`sv-review-mode${mode === item.id ? " is-active" : ""}`} onClick={() => changeMode(item.id)}><b>{item.label}</b><small>{item.hint}</small></button>)}
         </div>
         {effectiveMode === "classic" ? <>
           <button type="button" className={`sv-flashcard${revealed ? " revealed" : ""}`} onClick={() => setRevealed(true)} aria-label={revealed ? "Đang hiển thị nghĩa của từ" : "Lật thẻ để xem nghĩa"}>
-            <span className="sv-flashcard-kicker">{revealed ? "MẶT SAU · NGHĨA" : "MẶT TRƯỚC · TỪ VỰNG"}</span>
+            <span className="sv-flashcard-kicker">{revealed ? "Mặt sau · Nghĩa" : "Mặt trước · Từ vựng"}</span>
             <strong>{revealed ? current.meaning : current.word}</strong>
             {revealed && current.example ? <span className="sv-flashcard-example">“{current.example}”</span> : current.phonetic ? <span className="sv-flashcard-pronunciation">{current.phonetic}</span> : null}
             {revealed && recall != null && recall > 0 && <span className="sv-flashcard-recall">Khả năng nhớ hiện tại: <b>{Math.round(recall * 100)}%</b></span>}
@@ -225,7 +225,7 @@ export default function FlashcardPage() {
           <div className="sv-kbd-hint">{revealed ? <><kbd>1</kbd>–<kbd>4</kbd> đánh giá bằng bàn phím</> : <><kbd>1</kbd>–<kbd>4</kbd> đánh giá · <kbd>Space</kbd> xem nghĩa</>}</div>
         </> : <>
           <div className="sv-recall-card" key={current.vocabulary_id}>
-            <span className="sv-flashcard-kicker">{effectiveMode === "cloze" ? "ĐIỀN TỪ CÒN THIẾU" : "NHỚ NGHĨA CỦA TỪ"}</span>
+            <span className="sv-flashcard-kicker">{effectiveMode === "cloze" ? "Điền từ còn thiếu" : "Nhớ nghĩa của từ"}</span>
             {effectiveMode === "cloze" ? <>
               <p className="sv-cloze-sentence">{cloze.before}<span className="sv-cloze-blank">{checked ? cloze.answer : "_____"}</span>{cloze.after}</p>
               <p className="sv-cloze-meaning">Nghĩa: {current.meaning}</p>

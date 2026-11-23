@@ -32,7 +32,7 @@ export default function OnboardingLevelPage() {
       <section className="auth-shell" style={{ gridTemplateColumns: "1fr" }}>
         <div className="auth-panel" style={{ margin: "0 auto", maxWidth: 720 }}>
           <div className="auth-panel-head">
-            <span className="auth-kicker">BƯỚC 1/2</span>
+            <span className="auth-kicker">Bước 1/2</span>
             <h2>Chọn trình độ tiếng Anh hiện tại</h2>
             <p>Chúng tôi sẽ đề xuất từ vựng phù hợp với trình độ của bạn.</p>
           </div>

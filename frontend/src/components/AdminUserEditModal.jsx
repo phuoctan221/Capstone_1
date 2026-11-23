@@ -90,7 +90,7 @@ export default function AdminUserEditModal({ user, isSelf, busy, error, onSave, 
         aria-label="Sửa thông tin người dùng"
         onClick={(event) => event.stopPropagation()}
       >
-        <span className="sv-modal-eyebrow">ADMIN / TÀI KHOẢN</span>
+        <span className="sv-modal-eyebrow">Quản trị / Tài khoản</span>
         <h2>Sửa thông tin người dùng</h2>
         <p className="sv-modal-sub">{user.email}</p>
         <form onSubmit={submit} className="sv-admin-form-modal">

@@ -178,7 +178,7 @@ export default function AdminUsersPage() {
     <div className="sv-page sv-admin-page">
       <div className="sv-page-heading">
         <div>
-          <span className="sv-eyebrow">ADMIN / TÀI KHOẢN</span>
+          <span className="sv-eyebrow">Quản trị / Tài khoản</span>
           <h1>Quản lý người dùng</h1>
           <p>
             Tìm kiếm, sửa thông tin, đặt lại mật khẩu, khóa/mở khóa hoặc xóa tài khoản.
@@ -286,7 +286,7 @@ export default function AdminUsersPage() {
       {resetResult && (
         <div className="sv-modal-overlay" onClick={() => setResetResult(null)} role="presentation">
           <div className="sv-modal-card" role="dialog" aria-modal="true" aria-label="Mật khẩu mới" onClick={(event) => event.stopPropagation()}>
-            <span className="sv-modal-eyebrow">ADMIN / TÀI KHOẢN</span>
+            <span className="sv-modal-eyebrow">Quản trị / Tài khoản</span>
             <h2>Đã đặt lại mật khẩu</h2>
             <p className="sv-modal-sub">
               Mật khẩu mới của <strong>{resetResult.email}</strong> (chỉ hiển thị lần này):

@@ -130,7 +130,7 @@ export default function AdminDomainsPage() {
     <div className="sv-page sv-admin-page">
       <div className="sv-page-heading">
         <div>
-          <span className="sv-eyebrow">ADMIN / LĨNH VỰC</span>
+          <span className="sv-eyebrow">Quản trị / Lĩnh vực</span>
           <h1>Quản lý lĩnh vực</h1>
           <p>Ba lĩnh vực MVP dùng để nhóm từ vựng và bài học. Thay đổi tên/mô tả được giữ nguyên khi khởi động lại backend.</p>
         </div>

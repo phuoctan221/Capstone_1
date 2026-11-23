@@ -37,7 +37,7 @@ export default function LearnPage() {
   if (error) return <PageError message={error} onRetry={() => setRefresh((value) => value + 1)} />;
 
   return <div className="sv-page">
-    <div className="sv-page-heading"><div><span className="sv-eyebrow">THIẾT KẾ CHO BẠN</span><h1>Lộ trình từ vựng</h1><p>Học theo lĩnh vực, tiến bộ theo từng cấp độ.</p></div><Link to="/flashcards" className="sv-btn sv-btn-outline">Ôn tập FSRS ↗</Link></div>
+    <div className="sv-page-heading"><div><span className="sv-eyebrow">Thiết kế cho bạn</span><h1>Lộ trình từ vựng</h1><p>Học theo lĩnh vực, tiến bộ theo từng cấp độ.</p></div><Link to="/flashcards" className="sv-btn sv-btn-outline">Ôn tập FSRS ↗</Link></div>
 
     {chosen.length === 0 ? <EmptyState title="Chưa chọn lĩnh vực quan tâm" description="Chọn lĩnh vực quan tâm để lộ trình học hiển thị đúng nội dung cho bạn."><Link className="sv-btn sv-btn-primary" to="/settings/learning">Chọn lĩnh vực</Link></EmptyState> : <>
       {chosen.length > 1 && (

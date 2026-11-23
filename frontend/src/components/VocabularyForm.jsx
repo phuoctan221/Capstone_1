@@ -75,7 +75,7 @@ export default function VocabularyForm({ onCreated }) {
           disabled={loading}
           style={{ alignSelf: "flex-end" }}
         >
-          {loading ? "..." : "✨ AI gợi ý"}
+          {loading ? "..." : "AI gợi ý"}
         </button>
       </div>
       <div className="form-group">

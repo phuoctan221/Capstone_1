@@ -63,13 +63,12 @@ export default function LoginPage() {
           <Link
             className="auth-brand"
             to="/"
-            aria-label="SmartVOCAB AI - Trang chủ"
+            aria-label="SmartVocab - Trang chủ"
           >
-            <span className="auth-brand-mark">SV</span> SmartVOCAB{" "}
-            <span>AI</span>
+            <span className="auth-brand-mark">SV</span> SmartVocab
           </Link>
-          <span className="auth-eyebrow">HỌC MỖI NGÀY, TIẾN BỘ MỖI NGÀY</span>
-          <h1>Chào mừng bạn trở lại!</h1>
+          <span className="auth-eyebrow">Học từ vựng thông minh</span>
+          <h1>Đăng nhập tài khoản</h1>
           <p>
             Tiếp tục hành trình chinh phục từ vựng tiếng Anh theo cách của riêng
             bạn.
@@ -82,9 +81,9 @@ export default function LoginPage() {
         </div>
         <div className="auth-panel">
           <div className="auth-panel-head">
-            <span className="auth-kicker">RẤT VUI KHI GẶP LẠI BẠN</span>
+            <span className="auth-kicker">Tài khoản</span>
             <h2 id="login-title">Đăng nhập</h2>
-            <p>Nhập thông tin để tiếp tục học nhé.</p>
+            <p>Nhập thông tin để tiếp tục học.</p>
           </div>
           <form onSubmit={handleSubmit} noValidate>
             <div className="auth-field">

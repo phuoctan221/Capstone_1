@@ -95,7 +95,7 @@ export default function AdminUserDetailPage() {
         <div className="sv-detail-hero-main">
           <span className="sv-admin-avatar-lg">{String(user.username || user.email || "?").charAt(0).toUpperCase()}</span>
           <div>
-            <span className="sv-eyebrow">ADMIN / CHI TIẾT NGƯỜI DÙNG</span>
+            <span className="sv-eyebrow">Quản trị / Chi tiết người dùng</span>
             <h1>{user.username || "—"}</h1>
             <p>{user.email}</p>
             <div className="sv-detail-badges">
@@ -141,7 +141,7 @@ export default function AdminUserDetailPage() {
       <div className="sv-admin-split sv-detail-split">
         <div className="sv-admin-stack">
           <section className="sv-panel">
-            <div className="sv-admin-section-title"><div><span>TIẾN ĐỘ</span><h2>Theo lĩnh vực</h2></div></div>
+            <div className="sv-admin-section-title"><div><span>Tiến độ</span><h2>Theo lĩnh vực</h2></div></div>
             <p className="sv-detail-hint">Số từ đã bắt đầu học / tổng số từ của từng lĩnh vực (chỉ những từ người này đã có trong kho của mình).</p>
             {(summary?.domains || []).map((domain) => (
               <div key={domain.domain} className="sv-admin-bar-row">
@@ -158,7 +158,7 @@ export default function AdminUserDetailPage() {
           </section>
 
           <section className="sv-panel">
-            <div className="sv-admin-section-title"><div><span>TIẾN ĐỘ</span><h2>Theo bài học</h2></div></div>
+            <div className="sv-admin-section-title"><div><span>Tiến độ</span><h2>Theo bài học</h2></div></div>
             <div className="sv-admin-table-wrap">
               <table className="sv-admin-table sv-detail-lessons">
                 <thead>
@@ -187,7 +187,7 @@ export default function AdminUserDetailPage() {
 
         <div className="sv-admin-stack">
           <section className="sv-panel">
-            <div className="sv-admin-section-title"><div><span>KỸ NĂNG</span><h2>Mức thành thạo</h2></div></div>
+            <div className="sv-admin-section-title"><div><span>Kỹ năng</span><h2>Mức thành thạo</h2></div></div>
             <p className="sv-detail-hint">Điểm trung bình mỗi kỹ năng trên toàn bộ từ (ngưỡng thuộc {mastery?.threshold ?? 80}).</p>
             {Object.entries(mastery?.skills || {}).map(([skill, info]) => (
               <div key={skill} className="sv-detail-skill">
@@ -203,7 +203,7 @@ export default function AdminUserDetailPage() {
           </section>
 
           <section className="sv-panel">
-            <div className="sv-admin-section-title"><div><span>ÔN TẬP</span><h2>Thẻ ghi nhớ (FSRS)</h2></div></div>
+            <div className="sv-admin-section-title"><div><span>Ôn tập</span><h2>Thẻ ghi nhớ (FSRS)</h2></div></div>
             <div className="sv-detail-fsrs">
               <div><span>Tổng thẻ</span><b>{fsrs?.total_words ?? 0}</b></div>
               <div><span>Đang học</span><b>{fsrs?.learning ?? 0}</b></div>
@@ -215,7 +215,7 @@ export default function AdminUserDetailPage() {
       </div>
 
       <section className="sv-panel sv-detail-recent">
-        <div className="sv-admin-section-title"><div><span>HOẠT ĐỘNG</span><h2>Hoạt động gần đây</h2></div></div>
+        <div className="sv-admin-section-title"><div><span>Hoạt động</span><h2>Hoạt động gần đây</h2></div></div>
         <div className="sv-admin-table-wrap">
           <table className="sv-admin-table sv-detail-activity">
             <thead>

@@ -102,8 +102,12 @@ async def _call_gemini(prompt: str, label: str, expect_json: bool = True) -> str
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
+                headers = {"x-goog-api-key": settings.GEMINI_API_KEY}
                 response = await client.post(
-                    url, params={"key": settings.GEMINI_API_KEY}, json=payload
+                    url,
+                    headers=headers,
+                    params={"key": settings.GEMINI_API_KEY},
+                    json=payload,
                 )
 
                 if response.status_code in RETRYABLE_STATUS:
@@ -317,9 +321,10 @@ async def generate_error_analysis(
         example=vocabulary.get("example", ""),
     )
 
-    text = await _call_gemini(
+    text = await _call_ai(
         prompt,
         label=f"error-analysis:{vocabulary.get('word', '')}",
+        expect_json=True,
     )
 
     return _extract_json(text)

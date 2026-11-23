@@ -36,10 +36,10 @@ export default function AdminLayout() {
     <div className="sv-admin-shell">
       <aside className={`sv-admin-sidebar${open ? " is-open" : ""}`}>
         <div className="sv-admin-sidebar-head">
-          <Link className="sv-admin-brand" to="/admin" aria-label="SmartVocab AI Admin">
-            <span className="sv-admin-brand-mark">S<span>✦</span></span>
-            <span className="sv-admin-brand-name">Smart<span>Vocab</span><em> AI</em></span>
-            <span className="sv-admin-role-chip">ADMIN</span>
+          <Link className="sv-admin-brand" to="/admin" aria-label="SmartVocab Admin">
+            <span className="sv-admin-brand-mark">S</span>
+            <span className="sv-admin-brand-name">Smart<span>Vocab</span><em>Admin</em></span>
+            <span className="sv-admin-role-chip">Admin</span>
           </Link>
           <button
             type="button"

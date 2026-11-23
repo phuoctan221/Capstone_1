@@ -52,8 +52,8 @@ export default function DashboardPage() {
     <div className="sv-page sv-dashboard">
       <div className="sv-hero">
         <div className="sv-hero-content">
-          <span className="sv-hero-kicker">KHÔNG GIAN HỌC TẬP CỦA BẠN</span>
-          <h1>Chào {firstName},<br/><span>học thêm một chút nhé.</span></h1>
+          <span className="sv-hero-kicker">Không gian học tập</span>
+          <h1>Chào {firstName},<br/><span>tiếp tục bài học hôm nay nhé.</span></h1>
           <p>Từ vựng dễ nhớ hơn khi bạn học đúng kỹ năng và ôn tập đúng lúc.</p>
           {levelProgress && <div className="sv-hero-words">
             <b>{levelProgress.remaining}</b>
@@ -68,7 +68,6 @@ export default function DashboardPage() {
             <Link className="sv-btn sv-btn-ghost-light" to="/flashcards">Ôn tập FSRS</Link>
           </div>
         </div>
-        <div className="sv-hero-art" aria-hidden="true"><div className="sv-art-orbit sv-art-orbit-one"/><div className="sv-art-orbit sv-art-orbit-two"/><div className="sv-art-card sv-art-card-one"><span>Meaning</span><b>◎</b></div><div className="sv-art-card sv-art-card-two"><span>Spelling</span><b>✦</b></div><div className="sv-art-card sv-art-card-three"><span>Context</span><b>▤</b></div></div>
       </div>
 
       {state.secondaryError && <div className="sv-notice" role="status">{state.secondaryError} <button type="button" onClick={() => setRefresh((value) => value + 1)}>Tải lại</button></div>}
@@ -79,17 +78,17 @@ export default function DashboardPage() {
         <StatTile label="Từ đã bắt đầu học" value={progress.words_learned ?? "—"} note="Đã luyện tập hoặc ôn tập" icon="Aa" tone="blue"/>
         <StatTile label="Từ đã thành thạo" value={progress.words_mastered ?? "—"} note="Đạt cả 3 kỹ năng" icon="✓" tone="green"/>
         <StatTile label="Cần ôn hôm nay" value={due ?? "—"} note="Theo lịch FSRS" icon="↻" tone="amber"/>
-        <StatTile label="XP tích lũy" value={progress.xp ?? "—"} note={`Cấp độ ${progress.level ?? "—"} · ${progress.streak ?? "—"} ngày liên tiếp`} icon="✦" tone="violet"/>
+        <StatTile label="XP tích lũy" value={progress.xp ?? "—"} note={`Cấp độ ${progress.level ?? "—"} · ${progress.streak ?? "—"} ngày liên tiếp`} icon="XP" tone="violet"/>
       </div>
 
       <div className="sv-two-col">
         <section className="sv-panel">
-          <SectionHeading eyebrow="BẮT ĐẦU Ở ĐÂY" title="Bài học tiếp theo"/>
+          <SectionHeading eyebrow="Bắt đầu ở đây" title="Bài học tiếp theo"/>
           {nextLesson ? <Link to={`/lessons/${nextLesson.slug || nextLesson.id}?unit=${nextLesson.next_unit || 1}`} className="sv-next-lesson"><span className="sv-next-icon">{domainOf(nextLesson.topic)?.glyph || "Aa"}</span><span><strong>{nextLesson.title}</strong><small>Bài {nextLesson.next_unit || 1}/{nextLesson.unit_count || 1} · {nextLesson.next_unit_word_count || 15} từ · {nextLesson.level}</small></span><span className="sv-next-arrow">→</span></Link>
             : <EmptyState title="Chưa có bài học phù hợp" description="Hãy khám phá lộ trình hoặc cập nhật lĩnh vực quan tâm."><Link to="/learn" className="sv-btn sv-btn-primary">Xem lộ trình</Link></EmptyState>}
         </section>
         <section className="sv-panel sv-panel-tinted">
-          <SectionHeading eyebrow="ÔN TẬP THÔNG MINH" title="Đến hạn ôn tập"/>
+          <SectionHeading eyebrow="Ôn tập thông minh" title="Đến hạn ôn tập"/>
           <div className="sv-review-callout"><div className="sv-due-number">{due ?? "—"}</div><p>từ đang chờ được ôn theo thuật toán FSRS.</p></div>
           <Link className="sv-btn sv-btn-primary sv-btn-full" to="/flashcards">Mở bộ thẻ ôn tập →</Link>
         </section>

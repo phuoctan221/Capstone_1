@@ -51,7 +51,7 @@ export default function VocabularyBatchForm({ onCreated }) {
 
   return (
     <form className="card" onSubmit={handleSubmit}>
-      <h2 style={{ marginBottom: "0.5rem" }}>✨ Tạo hàng loạt bằng AI</h2>
+      <h2 style={{ marginBottom: "0.5rem" }}>Tạo hàng loạt bằng AI</h2>
       <p className="muted" style={{ marginBottom: "1rem", fontSize: "0.85rem" }}>
         Để trống danh sách từ để AI tự gợi ý theo chủ đề và trình độ, hoặc nhập
         từng từ (mỗi dòng một từ) để AI bổ sung chi tiết.

@@ -152,7 +152,7 @@ export default function AdminLessonsPage() {
     <div className="sv-page sv-admin-page">
       <div className="sv-page-heading">
         <div>
-          <span className="sv-eyebrow">ADMIN / BÀI HỌC</span>
+          <span className="sv-eyebrow">Quản trị / Bài học</span>
           <h1>Quản lý bài học</h1>
           <p>Bài học được nhóm tự động theo lĩnh vực + cấp độ từ kho từ vựng. Tại đây bạn có thể đặt tiêu đề/mô tả và kiểm tra từ vựng.</p>
         </div>
@@ -196,7 +196,7 @@ export default function AdminLessonsPage() {
         </form>
       </section>
 
-      <div className="sv-admin-section-title" style={{ marginTop: 24 }}><div><span>DANH SÁCH BÀI HỌC</span><h2>Theo lĩnh vực và cấp độ</h2></div></div>
+      <div className="sv-admin-section-title" style={{ marginTop: 24 }}><div><span>Danh sách bài học</span><h2>Theo lĩnh vực và cấp độ</h2></div></div>
       <div className="sv-admin-toolbar">
         <input className="sv-answer-field sv-admin-grow" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tiêu đề hoặc mã bài..." aria-label="Tìm bài học" />
         <select className="sv-answer-field" value={domain} onChange={(event) => setDomain(event.target.value)} aria-label="Lọc lĩnh vực">

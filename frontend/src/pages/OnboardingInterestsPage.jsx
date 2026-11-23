@@ -50,7 +50,7 @@ export default function OnboardingInterestsPage() {
       <section className="auth-shell" style={{ gridTemplateColumns: "1fr" }}>
         <div className="auth-panel" style={{ margin: "0 auto", maxWidth: 720 }}>
           <div className="auth-panel-head">
-            <span className="auth-kicker">BƯỚC 2/2</span>
+            <span className="auth-kicker">Bước 2/2</span>
             <h2>Chọn lĩnh vực quan tâm</h2>
             <p>Chọn một hoặc nhiều lĩnh vực để nhận lộ trình học phù hợp.</p>
           </div>

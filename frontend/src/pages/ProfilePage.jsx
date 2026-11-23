@@ -237,7 +237,7 @@ export default function ProfilePage() {
         </button>
         <div className="profile-stat-card">
           <span className="profile-stat-label">Streak</span>
-          <span className="profile-stat-value">{progress?.streak ?? 0} 🔥</span>
+          <span className="profile-stat-value">{progress?.streak ?? 0} ngày</span>
         </div>
       </div>
 

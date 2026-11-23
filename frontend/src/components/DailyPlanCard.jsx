@@ -41,7 +41,7 @@ export default function DailyPlanCard({ plan }) {
     <section className="sv-panel sv-daily" aria-labelledby="sv-daily-title">
       <div className="sv-daily-head">
         <div>
-          <span className="sv-eyebrow">KẾ HOẠCH HÔM NAY</span>
+          <span className="sv-eyebrow">Kế hoạch hôm nay</span>
           <h2 id="sv-daily-title">{plan.goal_met ? "Bạn đã đạt mục tiêu hôm nay" : "Học đúng thứ cần học"}</h2>
           <p className="sv-daily-sub">{formatToday(plan.date)} · {plan.studied_today}/{plan.goal} từ · chuỗi {plan.streak} ngày</p>
         </div>

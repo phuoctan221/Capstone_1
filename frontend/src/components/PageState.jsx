@@ -14,7 +14,7 @@ export function PageError({ message, onRetry }) {
 }
 
 export function EmptyState({ title, description, children }) {
-  return <div className="sv-empty-state"><span className="sv-empty-glyph" aria-hidden="true">✧</span><h3>{title}</h3><p>{description}</p>{children}</div>;
+  return <div className="sv-empty-state"><span className="sv-empty-glyph" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span><h3>{title}</h3><p>{description}</p>{children}</div>;
 }
 
 export function SectionHeading({ eyebrow, title, description, action }) {

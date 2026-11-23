@@ -68,7 +68,7 @@ export default function AdminDashboardPage() {
     <div className="sv-page sv-admin-page sv-admin-home">
       <section className="sv-admin-hero">
         <div>
-          <span className="sv-admin-eyebrow">SMARTVOCAB AI / HỆ THỐNG QUẢN TRỊ</span>
+          <span className="sv-admin-eyebrow">Hệ thống quản trị</span>
           <h1>Xin chào, {user?.username || "Quản trị viên"}.</h1>
           <p>Quản lý nội dung học tập, tài khoản và ngân hàng câu hỏi. Khu vực này tách biệt hoàn toàn với trải nghiệm người học và mọi API đều được backend kiểm tra quyền Admin.</p>
           <div className="sv-admin-top-actions">
@@ -76,11 +76,11 @@ export default function AdminDashboardPage() {
             <Link to="/admin/users" className="sv-btn sv-btn-ghost-light">Quản lý người dùng</Link>
           </div>
         </div>
-        <div className="sv-admin-hero-mark" aria-hidden="true"><span>SV</span><small>ADMIN</small></div>
+        <div className="sv-admin-hero-mark" aria-hidden="true"><span>SV</span><small>Admin</small></div>
       </section>
 
       <div className="sv-admin-section-title">
-        <div><span>THỐNG KÊ HỆ THỐNG</span><h2>Tổng quan dữ liệu thật</h2></div>
+        <div><span>Thống kê hệ thống</span><h2>Tổng quan dữ liệu thật</h2></div>
         <button type="button" className="sv-admin-refresh" onClick={() => setVersion((old) => old + 1)}>↻ Làm mới</button>
       </div>
 
@@ -98,7 +98,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <section className="sv-panel sv-admin-services">
-        <PanelHead kicker="TÌNH TRẠNG DỊCH VỤ" title="AI và luyện nói" icon="✦" tone="green" />
+        <PanelHead kicker="Tình trạng dịch vụ" title="AI và luyện nói" icon="●" tone="green" />
         <div className="sv-admin-service-grid">
           <div className={`sv-admin-service-card ${gemini.configured ? "ready" : "warning"}`}>
             <div><span>Gemini AI</span><b>{gemini.configured ? "Sẵn sàng" : "Chưa cấu hình"}</b></div>
@@ -114,7 +114,7 @@ export default function AdminDashboardPage() {
 
       <div className="sv-admin-breakdown">
         <section className="sv-panel">
-          <PanelHead kicker="PHÂN BỔ NỘI DUNG" title="Từ vựng theo lĩnh vực" icon="◈" tone="violet" />
+          <PanelHead kicker="Phân bổ nội dung" title="Từ vựng theo lĩnh vực" icon="◈" tone="violet" />
           {DOMAINS.map((domain) => {
             const count = Number(vocabByDomain[domain.id]) || 0;
             const share = vocabTotal ? formatPercent((count / vocabTotal) * 100) : 0;
@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
           })}
         </section>
         <section className="sv-panel">
-          <PanelHead kicker="NGÂN HÀNG CÂU HỎI" title="Câu hỏi theo kỹ năng" icon="✎" tone="blue" />
+          <PanelHead kicker="Ngân hàng câu hỏi" title="Câu hỏi theo kỹ năng" icon="✎" tone="blue" />
           {SKILLS.map((skill) => {
             const count = Number(exercisesBySkill[skill.id]) || 0;
             const share = exerciseTotal ? formatPercent((count / exerciseTotal) * 100) : 0;
@@ -143,7 +143,7 @@ export default function AdminDashboardPage() {
         </section>
       </div>
 
-      <div className="sv-admin-section-title"><div><span>CHỨC NĂNG QUẢN TRỊ</span><h2>Đi đến khu vực quản lý</h2></div></div>
+      <div className="sv-admin-section-title"><div><span>Chức năng quản trị</span><h2>Đi đến khu vực quản lý</h2></div></div>
       <div className="sv-admin-action-grid">
         {MODULES.map((item) => (
           <Link className={`sv-admin-action-card tone-${item.tone}`} to={item.to} key={item.to}>
@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="sv-admin-section-title"><div><span>HOẠT ĐỘNG GẦN ĐÂY</span><h2>Tài khoản mới nhất</h2></div><Link className="sv-text-link" to="/admin/users">Xem tất cả →</Link></div>
+      <div className="sv-admin-section-title"><div><span>Hoạt động gần đây</span><h2>Tài khoản mới nhất</h2></div><Link className="sv-text-link" to="/admin/users">Xem tất cả →</Link></div>
       <div className="sv-admin-table-wrap sv-admin-recent">
         <table className="sv-admin-table">
           <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trình độ</th><th>XP</th><th>Ngày tạo</th></tr></thead>

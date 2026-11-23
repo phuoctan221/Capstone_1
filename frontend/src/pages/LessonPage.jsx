@@ -39,7 +39,7 @@ export default function LessonPage() {
 
   return <div className="sv-page">
     <div className="sv-breadcrumb"><Link to="/learn">Lộ trình</Link><span>/</span><span>{domain?.label || lesson.topic}</span><span>/</span><b>{lesson.level} · Unit {currentUnit}</b></div>
-    <div className="sv-lesson-hero"><div className="sv-lesson-hero-main"><span className="sv-eyebrow">BÀI HỌC · {lesson.level} · UNIT {currentUnit}/{unitCount}</span><h1>{lesson.title}</h1><p>Học từ mới qua ba kỹ năng độc lập: nghĩa, chính tả và ngữ cảnh.</p><div className="sv-lesson-meta"><span>Bài {currentUnit}/{unitCount}</span><span>{total} từ trong unit</span><span>{learned} từ đã học</span><span>{percent}% tiến độ</span></div></div><div className="sv-lesson-hero-progress"><strong>{percent}%</strong><span>Tiến độ unit</span><div className="sv-lesson-meter"><div style={{width:`${percent}%`}}/></div></div></div>
+    <div className="sv-lesson-hero"><div className="sv-lesson-hero-main"><span className="sv-eyebrow">Bài học · {lesson.level} · Unit {currentUnit}/{unitCount}</span><h1>{lesson.title}</h1><p>Học từ mới qua ba kỹ năng độc lập: nghĩa, chính tả và ngữ cảnh.</p><div className="sv-lesson-meta"><span>Bài {currentUnit}/{unitCount}</span><span>{total} từ trong unit</span><span>{learned} từ đã học</span><span>{percent}% tiến độ</span></div></div><div className="sv-lesson-hero-progress"><strong>{percent}%</strong><span>Tiến độ unit</span><div className="sv-lesson-meter"><div style={{width:`${percent}%`}}/></div></div></div>
 
     <div className="sv-unit-nav">
       {prevUnit ? <Link className="sv-btn sv-btn-outline" to={`/lessons/${lessonId}?unit=${prevUnit}`}>← Bài trước</Link> : <span className="sv-btn sv-btn-outline sv-link-disabled" aria-disabled="true">← Bài trước</span>}
@@ -47,7 +47,7 @@ export default function LessonPage() {
       {nextUnit ? <Link className="sv-btn sv-btn-outline" to={`/lessons/${lessonId}?unit=${nextUnit}`}>Bài tiếp →</Link> : <span className="sv-btn sv-btn-outline sv-link-disabled" aria-disabled="true">Bài tiếp →</span>}
     </div>
 
-    <SectionHeading eyebrow="RÈN LUYỆN MỖI KỸ NĂNG" title="Chọn một cách luyện tập" description="Kết quả được chấm tại backend và cập nhật Mastery riêng cho từng kỹ năng."/>
+    <SectionHeading eyebrow="Rèn luyện mỗi kỹ năng" title="Chọn một cách luyện tập" description="Kết quả được chấm tại backend và cập nhật Mastery riêng cho từng kỹ năng."/>
     <div className="sv-skill-grid">{SKILLS.map((skill) => <Link key={skill.id} to={`/lessons/${lessonId}/practice/${skill.id}${unitQuery}`} className={`sv-skill-card sv-tone-${skill.tone}`}><span className="sv-skill-glyph">{skill.glyph}</span><span className="sv-skill-index">0{SKILLS.indexOf(skill)+1} / 03</span><h3>{skill.label}</h3><p>{skill.subtitle}</p><span className="sv-skill-action">Bắt đầu luyện →</span></Link>)}</div>
 
     <div className="sv-two-col sv-lesson-bottom-grid">
@@ -55,7 +55,7 @@ export default function LessonPage() {
       <section className="sv-panel"><SectionHeading title="Thông tin bài học"/><div className="sv-detail-row"><span>Lĩnh vực</span><b>{domain?.label || lesson.topic}</b></div><div className="sv-detail-row"><span>Trình độ</span><b>{lesson.level}</b></div><div className="sv-detail-row"><span>Unit</span><b>{currentUnit}/{unitCount}</b></div><div className="sv-detail-row"><span>Số từ trong unit</span><b>{total}</b></div><div className="sv-detail-row"><span>Tiến độ unit</span><b>{percent}%</b></div></section>
     </div>
 
-    <SectionHeading eyebrow="TÀI LIỆU HỌC" title="Từ vựng trong bài" description="Danh sách từ và ví dụ để bạn xem trước khi luyện."/>
+    <SectionHeading eyebrow="Tài liệu học" title="Từ vựng trong bài" description="Danh sách từ và ví dụ để bạn xem trước khi luyện."/>
     {words.length ? <div className="sv-word-grid">{words.map((word, index) => <article className="sv-word-card" key={word.id}><div className="sv-word-count">{String(index+1).padStart(2,"0")}</div><h3>{word.word}</h3>{word.phonetic && <small>{word.phonetic}</small>}<p>{word.meaning}</p>{word.example && <blockquote>{word.example}</blockquote>}</article>)}</div> : <EmptyState title="Bài học chưa có từ vựng" description="Hãy bổ sung vocabulary trong database trước khi kiểm thử."/>}
   </div>;
 }
