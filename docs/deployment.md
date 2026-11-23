@@ -28,7 +28,8 @@ Browser
 - Cả `api1`, `api2` đọc cùng `backend/.env`; **không có secret nào nằm trong image**.
 - Nginx strip tiền tố `/api` (`/api/vocabulary` → `/vocabulary`), khớp Vite proxy khi dev.
 - Phase A **không di chuyển dữ liệu**: vẫn dùng Atlas, không ghi/xóa dữ liệu Atlas ngoài việc backend tạo index idempotent lúc khởi động.
-- AI gọi **Google Gemini** trực tiếp từ backend (dependency ngoài, cần egress internet).
+- AI gọi **Google Gemini** trực tiếp từ backend, fallback Cloudflare khi cấu hình; story game
+  dùng Mistral. Đều là dependency ngoài, cần egress internet. Pronunciation gọi Speechace/Chivox.
 
 ## 2. Chạy Phase A
 
@@ -78,9 +79,14 @@ Compose đọc `backend/.env` qua `env_file`. Mẫu đầy đủ ở `.env.docke
 | `MONGO_TIMEOUT_MS` | Timeout chọn server/connect (mặc định 10000) |
 | `JWT_SECRET` | Chuỗi ngẫu nhiên, không commit |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Thời hạn JWT (mặc định 1440) |
-| `GEMINI_API_KEY` | Key riêng từng người (bật AI) |
-| `GEMINI_MODEL` | Model Gemini dùng để sinh từ vựng |
-| `CF_*` | Cấu hình Cloudflare dự phòng, hiện chưa nối vào `ai_service` |
+| `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_RPM` | Key/model/tốc độ Gemini; model mặc định `gemini-3.8-flash` |
+| `MISTRAL_API_KEY`, `MISTRAL_MODEL` | Story game; model mặc định `mistral-small-latest` |
+| `CF_ACCOUNT_ID`, `CF_API_TOKEN`, `CF_MODEL`, `CF_RPM` | Cloudflare Workers AI, fallback khi Gemini lỗi |
+| `DICTIONARY_RPM` | Giới hạn gọi dictionaryapi.dev |
+| `SPEECHACE_*`, `PRONUNCIATION_PROVIDER`, `CHIVOX_API_KEY`, `FFMPEG_PATH` | Chấm phát âm; provider mặc định `speechace` |
+| `AVATAR_MAX_BYTES` | Dung lượng ảnh đại diện tối đa (mặc định 2 MB) |
+| `ASSESSMENT_*` | Số câu/ngưỡng đạt/TTL/cooldown của bài đánh giá |
+| `SMTP_*`, `PASSWORD_RESET_*` | Gửi OTP quên mật khẩu (xem `backend/.env.example`) |
 | `CORS_ORIGINS` | JSON array; same-origin qua nginx nên thường không cần đổi |
 | `MASTERY_*` | Ngưỡng/điểm Mastery (đúng, sai, hint, fast bonus, threshold) |
 | `SESSION_MAX_QUESTIONS`, `MIN_LESSON_WORDS` | Giới hạn engine bài tập |
@@ -92,6 +98,9 @@ Backend có thêm `retryWrites=True`, `appname`, timeout kết nối trong `app/
 - `api1` và `api2` chạy **cùng một máy** → tăng khả năng chịu lỗi process, không chống hỏng host.
 - Nginx resolve `api1`/`api2` lúc khởi động. Nếu container API bị tạo lại và đổi IP, chạy `docker compose restart web`.
 - Log đang ghi ra stdout; muốn lưu file dài hạn cần thêm driver logging/volume.
+- Compose mount `./backend/uploads:/app/uploads` cho ảnh đại diện; mount này nằm cùng host
+  với `api1`/`api2`, không phải volume MongoDB. Khi scale sang nhiều host cần chuyển sang
+  object storage hoặc shared volume.
 
 ## 6. Chuẩn bị Phase B — MongoDB Replica Set 3 node
 

@@ -17,4 +17,10 @@ lookup. Practice does not automatically mark custom words as learned.
 Datamuse documents an API-key requirement starting February 1, 2027. Revisit suggestion
 authentication before that date. Suggestion failures do not bypass word validation.
 
+The same feature area also exposes `GET /speaking/words`,
+`POST /speaking/exercises`, `GET /speaking/exercises/{exercise_id}` and
+`POST /speaking/exercises/{exercise_id}/items/{index}/score`. Scoring sends raw audio
+(max 5 MB) to Speechace or Chivox according to `PRONUNCIATION_PROVIDER`; a provider
+failure returns HTTP 503. See [api-spec.md](api-spec.md) for request/response shapes.
+
 Checks: `python -m unittest tests.test_word_validation tests.test_speaking tests.test_chivox`.
