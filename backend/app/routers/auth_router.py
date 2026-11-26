@@ -29,6 +29,8 @@ VALID_INTERESTS = {
     "general",
 }
 
+LEVEL_ORDER = {"A1": 0, "A2": 1, "B1": 2, "B2": 3, "C1": 4, "C2": 5}
+
 
 def _user_out(user: dict) -> dict:
     return {
@@ -70,6 +72,7 @@ async def register(data: UserCreate):
         "password_hash": auth_service.hash_password(data.password),
         "role": "user",
         "created_at": now,
+        "last_active_at": now,
         "learning_level": None,
         "interests": [],
         "onboarded": False,
@@ -104,6 +107,12 @@ async def login(data: UserLogin):
             detail="Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.",
         )
 
+    now = datetime.now(timezone.utc)
+    await db.users.update_one(
+        {"_id": user["_id"]}, {"$set": {"last_active_at": now}}
+    )
+    user["last_active_at"] = now
+
     token = auth_service.create_access_token(
         str(user["_id"]), auth_service.token_version_of(user)
     )
@@ -130,6 +139,19 @@ async def update_me(
             )
         updates["username"] = username
     if data.learning_level is not None:
+        current_level = user.get("learning_level") or ""
+        new_level = data.learning_level
+        # Block direct level-up: user must pass an assessment to go higher
+        if (
+            current_level
+            and new_level in LEVEL_ORDER
+            and current_level in LEVEL_ORDER
+            and LEVEL_ORDER[new_level] > LEVEL_ORDER[current_level]
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn cần hoàn thành bài kiểm tra đánh giá để nâng trình độ.",
+            )
         updates["learning_level"] = data.learning_level
     if data.interests is not None:
         interests = []

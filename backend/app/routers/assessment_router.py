@@ -16,6 +16,7 @@ async def create_assessment(payload: AssessmentCreate, user: dict = Depends(get_
             payload.level,
             skip_learning=payload.skip_learning,
             placement_target=payload.placement_target,
+            domains=payload.domains,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

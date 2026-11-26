@@ -4,6 +4,7 @@ import { updateProfile } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const LEVEL_ORDER = { A1: 0, A2: 1, B1: 2, B2: 3, C1: 4, C2: 5 };
 const LEVEL_DESC = {
   A1: "Mới bắt đầu",
   A2: "Cơ bản",
@@ -22,7 +23,8 @@ const GOAL_PRESETS = [5, 10, 20, 30];
 export default function OnboardingSettingsPage() {
   const navigate = useNavigate();
   const user = useAuth();
-  const [level, setLevel] = useState(user?.learning_level || "");
+  const currentLevel = user?.learning_level || "";
+  const [level, setLevel] = useState(currentLevel);
   const [selected, setSelected] = useState(user?.interests || []);
   const [dailyGoal, setDailyGoal] = useState(user?.daily_goal || 10);
   const [dailyNewLimit, setDailyNewLimit] = useState(user?.daily_new_limit || 10);
@@ -31,6 +33,10 @@ export default function OnboardingSettingsPage() {
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
 
+  // Modal state for level-up confirmation
+  const [showLevelUpModal, setShowLevelUpModal] = useState(false);
+  const [pendingLevel, setPendingLevel] = useState(null);
+
   useEffect(() => {
     setLevel(user?.learning_level || "");
     setSelected(user?.interests || []);
@@ -38,6 +44,39 @@ export default function OnboardingSettingsPage() {
     setDailyNewLimit(user?.daily_new_limit || 10);
     setDailyReviewLimit(user?.daily_review_limit || 30);
   }, [user]);
+
+  const isHigherLevel = (targetLevel) => {
+    if (!currentLevel || !targetLevel) return false;
+    return (LEVEL_ORDER[targetLevel] ?? 0) > (LEVEL_ORDER[currentLevel] ?? 0);
+  };
+
+  const handleLevelClick = (l) => {
+    setError("");
+    setOk("");
+    if (isHigherLevel(l)) {
+      // Show confirmation modal instead of selecting directly
+      setPendingLevel(l);
+      setShowLevelUpModal(true);
+    } else {
+      // Same level or lower: allow direct selection
+      setLevel(l);
+    }
+  };
+
+  const confirmLevelUpTest = () => {
+    setShowLevelUpModal(false);
+    const interests = selected.length > 0 ? selected : (user?.interests || ["general"]);
+    const testDomain = interests[0] || "general";
+    const domainsParam = encodeURIComponent(interests.join(","));
+    navigate(
+      `/assessments/${testDomain}/${pendingLevel.toLowerCase()}?placement=1&skip=1&domains=${domainsParam}&return=/settings/learning`
+    );
+  };
+
+  const cancelLevelUp = () => {
+    setShowLevelUpModal(false);
+    setPendingLevel(null);
+  };
 
   const toggle = (value) => {
     setSelected((prev) =>
@@ -118,28 +157,36 @@ export default function OnboardingSettingsPage() {
       <div className="card settings-card">
         <div className="settings-card-head">
           <h3>Trình độ tiếng Anh</h3>
-          <p className="muted">Chọn trình độ phù hợp để SmartVOCAB đề xuất từ vựng đúng nhu cầu.</p>
+          <p className="muted">
+            Chọn trình độ phù hợp để SmartVOCAB đề xuất từ vựng đúng nhu cầu.
+            {currentLevel && (
+              <span className="level-current-hint">
+                {" "}Trình độ hiện tại: <strong>{currentLevel}</strong>. Muốn nâng cấp lên trình độ cao hơn cần hoàn thành bài kiểm tra đánh giá (đạt 85%).
+              </span>
+            )}
+          </p>
         </div>
         <div className="level-card-grid">
           {LEVELS.map((l) => {
             const active = level === l;
+            const locked = isHigherLevel(l);
             return (
               <button
                 key={l}
                 type="button"
-                onClick={() => {
-                  setLevel(l);
-                  setError("");
-                  setOk("");
-                }}
-                className={active ? "level-card is-active" : "level-card"}
+                onClick={() => handleLevelClick(l)}
+                className={`level-card ${active ? "is-active" : ""} ${locked ? "is-locked" : ""}`}
                 aria-pressed={active}
               >
                 <div className="level-card-top">
                   <span className="level-code">{l}</span>
                   {active && <span className="level-check" aria-hidden="true">✓</span>}
+                  {locked && !active && <span className="level-lock" aria-hidden="true">🔒</span>}
                 </div>
                 <p className="level-desc">{LEVEL_DESC[l]}</p>
+                {locked && !active && (
+                  <span className="level-test-hint">Cần thi để mở khóa</span>
+                )}
               </button>
             );
           })}
@@ -272,6 +319,49 @@ export default function OnboardingSettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* Level-up Confirmation Modal */}
+      {showLevelUpModal && (
+        <div className="level-up-modal-overlay" onClick={cancelLevelUp}>
+          <div className="level-up-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="level-up-modal-icon">📝</div>
+            <h3>Bài kiểm tra thăng hạng</h3>
+            <p>
+              Để nâng trình độ lên <strong>{pendingLevel}</strong> ({LEVEL_DESC[pendingLevel]}),
+              bạn cần hoàn thành bài kiểm tra đánh giá gồm <strong>20 câu hỏi</strong>.
+            </p>
+            <div className="level-up-modal-details">
+              <div className="detail-row">
+                <span>Số câu hỏi:</span>
+                <strong>20 câu</strong>
+              </div>
+              <div className="detail-row">
+                <span>Điểm cần đạt:</span>
+                <strong>85% (17/20 câu đúng)</strong>
+              </div>
+              <div className="detail-row">
+                <span>Thời gian làm bài:</span>
+                <strong>20 phút</strong>
+              </div>
+              <div className="detail-row">
+                <span>Thời gian chờ thi lại:</span>
+                <strong>15 phút</strong>
+              </div>
+            </div>
+            <p className="level-up-modal-note">
+              Nếu không đạt, bạn có thể thi lại sau 15 phút. Bạn đã sẵn sàng chưa?
+            </p>
+            <div className="level-up-modal-actions">
+              <button className="sv-btn sv-btn-outline" onClick={cancelLevelUp}>
+                Hủy
+              </button>
+              <button className="sv-btn sv-btn-primary" onClick={confirmLevelUpTest}>
+                Bắt đầu làm bài thi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

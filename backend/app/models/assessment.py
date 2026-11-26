@@ -6,7 +6,8 @@ from app.models.exercise import ExerciseItemOut
 
 
 class AssessmentCreate(BaseModel):
-    domain: str
+    domain: str = "general"
+    domains: list[str] | None = None
     level: str = Field(..., pattern="^(A1|A2|B1|B2|C1|C2)$")
     skip_learning: bool = False
     placement_target: str | None = Field(None, pattern="^(A1|A2|B1|B2|C1|C2)$")

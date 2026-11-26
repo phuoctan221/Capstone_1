@@ -7,6 +7,7 @@ to the target word, not merely checked for appearing in the sentence.
 """
 from __future__ import annotations
 
+import random
 import re
 from datetime import datetime, timezone
 
@@ -87,15 +88,15 @@ def build_items_for_words(
 
         # Meaning: multiple choice, backend stores the correct meaning.
         if english and meaning and len(pool) >= MIN_OPTIONS:
-            options = [meaning]
-            for candidate in pool:
-                if normalize_text(candidate) == normalize_text(meaning):
-                    continue
-                if candidate not in options:
-                    options.append(candidate)
-                if len(options) >= 4:
-                    break
+            distractors = [
+                candidate
+                for candidate in pool
+                if normalize_text(candidate) != normalize_text(meaning)
+            ]
+            random.shuffle(distractors)
+            options = [meaning, *distractors[:3]]
             if len(options) >= MIN_OPTIONS:
+                random.shuffle(options)
                 items.append(
                     {
                         **common,

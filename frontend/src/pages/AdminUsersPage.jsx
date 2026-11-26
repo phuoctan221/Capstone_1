@@ -8,10 +8,11 @@ import {
   setUserRole,
   updateAdminUser,
 } from "../services/adminService";
-import { formatApiError, formatDate } from "../constants/domains";
+import { formatApiError, formatDate, formatDateTime, isRecentlyOnline } from "../constants/domains";
 import { useAuth } from "../hooks/useAuth";
 import ConfirmDialog from "../components/ConfirmDialog";
 import AdminUserEditModal from "../components/AdminUserEditModal";
+import UserAvatar from "../components/UserAvatar";
 import { EmptyState, PageError, PageLoading } from "../components/PageState";
 
 const PAGE_SIZE = 50;
@@ -225,14 +226,28 @@ export default function AdminUsersPage() {
                     <tr key={user.id} className={locked ? "is-locked" : undefined}>
                       <td>
                         <div className="sv-admin-cell-main">
-                          <span className="sv-admin-avatar-sm">{String(user.username || user.email || "?").charAt(0).toUpperCase()}</span>
+                          <UserAvatar user={user} className="sv-admin-avatar-sm" />
                           <span><strong>{user.username || "—"} {self && <span className="sv-admin-badge self">Bạn</span>}</strong><small>{user.email}</small></span>
                         </div>
                       </td>
                       <td><span className={`sv-admin-badge ${user.role}`}>{user.role === "admin" ? "Admin" : "Người học"}</span></td>
                       <td><span className={`sv-admin-badge ${locked ? "locked" : "ok"}`}>{locked ? "Đã khóa" : "Hoạt động"}</span></td>
                       <td>{user.learning_level || "—"}</td>
-                      <td><span className="sv-admin-strong">{user.xp ?? 0} XP</span><br /><small className="sv-admin-muted">{user.streak ?? 0} ngày liên tiếp</small></td>
+                      <td>
+                        <span className="sv-admin-strong">{user.xp ?? 0} XP</span>
+                        <small className="sv-admin-muted"> · {user.streak ?? 0} ngày liên tiếp</small>
+                        <br />
+                        <small
+                          className={`sv-admin-last-active${isRecentlyOnline(user.last_active_at) ? " is-online" : ""}`}
+                          title={user.last_active_at ? `Hoạt động cuối: ${formatDateTime(user.last_active_at)}` : undefined}
+                        >
+                          {isRecentlyOnline(user.last_active_at) ? (
+                            <><span className="sv-online-dot" aria-hidden="true" />Đang online · {formatDate(user.last_active_at)}</>
+                          ) : (
+                            <>Online cuối: {formatDate(user.last_active_at)}</>
+                          )}
+                        </small>
+                      </td>
                       <td className="sv-admin-muted">{formatDate(user.created_at)}</td>
                       <td>
                         <div className="sv-user-actions">

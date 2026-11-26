@@ -54,13 +54,23 @@ export async function analyzeAllMistakes(mistakes) {
   return data;
 }
 
-export async function createAssessment(domain, level, skipLearning = false, placementTarget = null) {
-  const { data } = await api.post("/assessments", {
+export async function createAssessment(
+  domain,
+  level,
+  skipLearning = false,
+  placementTarget = null,
+  domains = null
+) {
+  const payload = {
     domain,
     level,
     skip_learning: skipLearning,
     placement_target: placementTarget,
-  });
+  };
+  if (Array.isArray(domains) && domains.length > 0) {
+    payload.domains = domains;
+  }
+  const { data } = await api.post("/assessments", payload);
   return data;
 }
 

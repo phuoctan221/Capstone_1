@@ -33,11 +33,33 @@ def token_version_of(user: dict) -> int:
 
 
 VALID_ROLES = {"user", "admin"}
+LAST_ACTIVE_THROTTLE_SECONDS = 60
 
 
 def normalize_role(value: object) -> str:
     """Only the exact persisted value "admin" grants admin privileges."""
     return "admin" if str(value or "").strip().lower() == "admin" else "user"
+
+
+def _as_utc(value: object) -> datetime | None:
+    if not isinstance(value, datetime):
+        return None
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+async def _touch_last_active(db, user: dict) -> None:
+    now = datetime.now(timezone.utc)
+    last_active = _as_utc(user.get("last_active_at"))
+    if last_active and (now - last_active).total_seconds() < LAST_ACTIVE_THROTTLE_SECONDS:
+        return
+    try:
+        await db.users.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"last_active_at": now}},
+        )
+        user["last_active_at"] = now
+    except Exception:
+        pass
 
 
 async def get_current_user(
@@ -81,6 +103,7 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Account is locked"
         )
+    await _touch_last_active(db, user)
     user["id"] = str(user.pop("_id"))
     if "interests" not in user or user.get("interests") is None:
         user["interests"] = []

@@ -74,6 +74,20 @@ def _clean_user(doc: dict) -> dict:
     doc["daily_new_limit"] = int(doc.get("daily_new_limit", 10) or 10)
     doc["daily_review_limit"] = int(doc.get("daily_review_limit", 30) or 30)
     doc["is_active"] = doc.get("is_active", True) is not False
+    last_active = doc.get("last_active_at")
+    if not last_active:
+        candidates = [
+            dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+            for dt in (
+                doc.get("last_study_date"),
+                doc.get("updated_at"),
+                doc.get("profile_completed_at"),
+                doc.get("created_at"),
+            )
+            if isinstance(dt, datetime)
+        ]
+        last_active = max(candidates) if candidates else None
+    doc["last_active_at"] = last_active
     return doc
 
 

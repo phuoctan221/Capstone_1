@@ -1,6 +1,7 @@
 """Server-owned level assessment attempts and promotion rules."""
 from __future__ import annotations
 
+import random
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -13,6 +14,7 @@ from app.services import exercise_service, lesson_service
 
 ATTEMPTS = "level_assessment_attempts"
 RESULTS = "level_assessment_results"
+ASSESSMENT_SKILLS = ("meaning", "spelling")
 
 
 def _now() -> datetime:
@@ -24,8 +26,93 @@ def _public_attempt(attempt: dict) -> dict:
     return {key: value for key, value in attempt.items() if key != "_id"}
 
 
+def _normalize_domains(domain: str, domains: list[str] | None) -> list[str]:
+    raw = domains if domains else [domain]
+    ordered: list[str] = []
+    for entry in raw:
+        norm = domain_for_topic(entry)
+        if norm not in ordered:
+            ordered.append(norm)
+    return ordered or [domain_for_topic(domain)]
+
+
+def _serialize_assessment_question(item: dict) -> dict:
+    question = exercise_service.serialize_question(item)
+    if len(question.get("options") or []) > 1:
+        options = list(question["options"])
+        random.shuffle(options)
+        question["options"] = options
+    return question
+
+
+def _select_questions(items: list[dict], limit: int) -> list[dict]:
+    """Pick up to ``limit`` items, maximizing unique words and avoiding consecutive repeats."""
+    by_vocab: dict[str, list[dict]] = {}
+    for item in items:
+        by_vocab.setdefault(str(item.get("vocabulary_id")), []).append(item)
+
+    vocab_ids = list(by_vocab)
+    random.shuffle(vocab_ids)
+
+    selected: list[dict] = []
+    # Round 1: at most 1 question per unique word.
+    for vid in vocab_ids:
+        if len(selected) >= limit:
+            break
+        pool = by_vocab[vid]
+        random.shuffle(pool)
+        selected.append(pool.pop())
+
+    # Round 2 (only if unique words < limit): fill from leftovers without adjacent duplicates.
+    while len(selected) < limit:
+        leftovers = [
+            (vid, pool) for vid, pool in by_vocab.items() if pool
+        ]
+        if not leftovers:
+            break
+        random.shuffle(leftovers)
+        last_vid = str(selected[-1].get("vocabulary_id")) if selected else None
+        leftovers.sort(key=lambda pair: 1 if pair[0] == last_vid else 0)
+        _, pool = leftovers[0]
+        selected.append(pool.pop())
+
+    return selected
+
+
 async def _level_words(domain: str, level: str) -> list[dict]:
     return await lesson_service.get_lesson_words(domain, level)
+
+
+async def _gather_assessment_words(
+    domains: list[str], level: str, supplement_to_target: bool
+) -> list[dict]:
+    db = get_database()
+    collected: list[dict] = []
+    seen_ids: set[str] = set()
+
+    def _add_words(docs: list[dict]) -> None:
+        for doc in docs:
+            wid = str(doc["_id"])
+            if wid not in seen_ids:
+                seen_ids.add(wid)
+                collected.append(doc)
+
+    for d in domains:
+        _add_words(await _level_words(d, level))
+
+    target_count = settings.ASSESSMENT_QUESTION_COUNT
+    if (supplement_to_target and len(collected) < target_count) or len(collected) < 3:
+        for fallback_domain in lesson_service.MVP_DOMAIN_ORDER:
+            if fallback_domain not in domains:
+                _add_words(await _level_words(fallback_domain, level))
+                if len(collected) >= target_count:
+                    break
+
+    if (supplement_to_target and len(collected) < target_count) or len(collected) < 3:
+        extra = [doc async for doc in db.vocabularies.find({"level": level}).sort("word", 1)]
+        _add_words(extra)
+
+    return collected
 
 
 async def _completed_level(user_id: str, domain: str, level: str) -> bool:
@@ -72,8 +159,10 @@ async def create_attempt(
     level: str,
     skip_learning: bool = False,
     placement_target: str | None = None,
+    domains: list[str] | None = None,
 ) -> dict:
-    domain = domain_for_topic(domain)
+    requested_domains = _normalize_domains(domain, domains)
+    domain = requested_domains[0]
     level = level.upper()
     placement_target = (placement_target or "").upper() or None
     if placement_target and (
@@ -82,35 +171,49 @@ async def create_attempt(
     ):
         raise ValueError("Placement target must match the assessment level")
     state = await status(user_id, domain, level)
-    if state["passed"]:
+    if state["passed"] and not placement_target:
         raise ValueError("Level assessment has already been passed")
-    if not state["completed"] and not skip_learning:
+    if not state["completed"] and not skip_learning and not placement_target:
         raise ValueError("Complete every unit in this level before taking the assessment")
     now = _now()
     if state["retry_at"] and state["retry_at"] > now:
         raise ValueError("Assessment retry cooldown is still active")
-    words = await _level_words(domain, level)
-    await exercise_service.ensure_exercise_bank(words, domain=domain, level=level)
+
+    supplement = bool(placement_target or skip_learning or len(requested_domains) > 1)
+    words = await _gather_assessment_words(requested_domains, level, supplement)
+    await exercise_service.ensure_exercise_bank(words, domain=None, level=level)
     vocab_ids = [str(word["_id"]) for word in words]
     db = get_database()
-    items = [doc async for doc in db.exercise_items.find({
-        "vocabulary_id": {"$in": vocab_ids}, "active": True,
-    }).sort("exercise_item_id", 1)]
+    items = [
+        doc
+        async for doc in db.exercise_items.find(
+            {
+                "vocabulary_id": {"$in": vocab_ids},
+                "active": True,
+                "skill": {"$in": list(ASSESSMENT_SKILLS)},
+            }
+        )
+    ]
     if len(items) < 3:
         raise ValueError("Not enough assessment questions are available")
-    selected = items[: min(settings.ASSESSMENT_QUESTION_COUNT, len(items))]
+    selected = _select_questions(items, settings.ASSESSMENT_QUESTION_COUNT)
     attempt = {
-        "attempt_id": uuid4().hex, "user_id": user_id, "domain": domain, "level": level,
+        "attempt_id": uuid4().hex,
+        "user_id": user_id,
+        "domain": domain,
+        "domains": requested_domains,
+        "level": level,
         "item_ids": [item["exercise_item_id"] for item in selected],
         "skip_learning": skip_learning,
         "placement_target": placement_target,
-        "status": "active", "created_at": now,
+        "status": "active",
+        "created_at": now,
         "expires_at": now + timedelta(minutes=settings.ASSESSMENT_EXPIRE_MINUTES),
     }
     await db[ATTEMPTS].insert_one(attempt)
     return {
         **_public_attempt(attempt),
-        "questions": [exercise_service.serialize_question(item) for item in selected],
+        "questions": [_serialize_assessment_question(item) for item in selected],
         "question_count": len(selected),
     }
 
@@ -125,7 +228,7 @@ async def get_attempt(user_id: str, attempt_id: str) -> dict | None:
         return None
     return {
         **_public_attempt(attempt),
-        "questions": [exercise_service.serialize_question(item) for item in items],
+        "questions": [_serialize_assessment_question(item) for item in items],
         "question_count": len(items),
     }
 
@@ -153,14 +256,40 @@ async def submit_attempt(user_id: str, attempt_id: str, answers: list[dict]) -> 
     for item in items:
         is_correct, correct_answer, _ = exercise_service.grade(item, submitted[item["exercise_item_id"]])
         correct += int(is_correct)
-        details.append({"exercise_item_id": item["exercise_item_id"], "correct": is_correct, "correct_answer": correct_answer, "user_answer": submitted[item["exercise_item_id"]]})
+        details.append(
+            {
+                "exercise_item_id": item["exercise_item_id"],
+                "vocabulary_id": item.get("vocabulary_id"),
+                "skill": item.get("skill"),
+                "prompt": item.get("prompt", ""),
+                "cloze": item.get("cloze"),
+                "options": list(item.get("options") or []),
+                "correct": is_correct,
+                "correct_answer": correct_answer,
+                "user_answer": submitted[item["exercise_item_id"]],
+            }
+        )
     total = len(items)
     percent = round(correct / total * 100) if total else 0
     passed = percent >= settings.ASSESSMENT_PASS_PERCENT
     placement_target = existing.get("placement_target")
     next_level = lesson_service.next_level(existing["domain"], existing["level"])
     opened_level = placement_target or next_level
-    result = {"attempt_id": attempt_id, "domain": existing["domain"], "level": existing["level"], "correct": correct, "total": total, "percent": percent, "passed": passed, "next_level": next_level, "opened_level": opened_level, "placement_target": placement_target, "results": details, "submitted_at": now}
+    result = {
+        "attempt_id": attempt_id,
+        "domain": existing["domain"],
+        "domains": existing.get("domains") or [existing["domain"]],
+        "level": existing["level"],
+        "correct": correct,
+        "total": total,
+        "percent": percent,
+        "passed": passed,
+        "next_level": next_level,
+        "opened_level": opened_level,
+        "placement_target": placement_target,
+        "results": details,
+        "submitted_at": now,
+    }
     updated = await db[ATTEMPTS].find_one_and_update(
         {"_id": existing["_id"], "status": "active"},
         {"$set": {"status": "submitted", "submitted_at": now, "passed": passed, "result": result}},
@@ -175,9 +304,12 @@ async def submit_attempt(user_id: str, attempt_id: str, answers: list[dict]) -> 
             placements = lesson_service.placement_levels_for_user(
                 user, list(lesson_service.MVP_DOMAIN_ORDER)
             )
-            current = placements[existing["domain"]]
-            if lesson_service.LEVEL_ORDER[placement_target] > lesson_service.LEVEL_ORDER[current]:
-                placements[existing["domain"]] = placement_target
+            target_domains = existing.get("domains") or [existing["domain"]]
+            for target_domain in target_domains:
+                norm_domain = domain_for_topic(target_domain)
+                current = placements.get(norm_domain, "A1")
+                if lesson_service.LEVEL_ORDER[placement_target] > lesson_service.LEVEL_ORDER.get(current, 0):
+                    placements[norm_domain] = placement_target
             learning_level = str(user.get("learning_level") or "A1").upper()
             if lesson_service.LEVEL_ORDER[placement_target] > lesson_service.LEVEL_ORDER.get(learning_level, 0):
                 learning_level = placement_target

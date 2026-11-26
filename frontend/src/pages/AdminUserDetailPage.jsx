@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchAdminUser, setAdminUserStatus } from "../services/adminService";
-import { DOMAINS, formatApiError, formatDate, formatPercent } from "../constants/domains";
+import { DOMAINS, formatApiError, formatDate, formatDateTime, formatPercent } from "../constants/domains";
 import ConfirmDialog from "../components/ConfirmDialog";
+import UserAvatar from "../components/UserAvatar";
 import { PageError, PageLoading } from "../components/PageState";
 
 const SKILL_LABELS = {
@@ -93,7 +94,7 @@ export default function AdminUserDetailPage() {
 
       <div className="sv-detail-hero">
         <div className="sv-detail-hero-main">
-          <span className="sv-admin-avatar-lg">{String(user.username || user.email || "?").charAt(0).toUpperCase()}</span>
+          <UserAvatar user={user} className="sv-admin-avatar-lg" />
           <div>
             <span className="sv-eyebrow">ADMIN / CHI TIẾT NGƯỜI DÙNG</span>
             <h1>{user.username || "—"}</h1>
@@ -109,6 +110,7 @@ export default function AdminUserDetailPage() {
         <div className="sv-detail-hero-side">
           <div className="sv-detail-meta">
             <span>Ngày tạo</span><b>{formatDate(user.created_at)}</b>
+            <span>Online gần nhất</span><b>{formatDateTime(user.last_active_at)}</b>
             <span>Học gần nhất</span><b>{formatDate(summary?.last_study_date)}</b>
             <span>Lĩnh vực quan tâm</span>
             <b className="sv-detail-interests">
